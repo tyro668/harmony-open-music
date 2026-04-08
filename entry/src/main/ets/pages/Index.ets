@@ -7,6 +7,7 @@ import { liveViewManager } from '@kit.LiveViewKit';
 import { preferences } from '@kit.ArkData';
 import { http } from '@kit.NetworkKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
+import { BusinessError } from '@ohos.base';
 import fs from '@ohos.file.fs';
 
 enum MainTab {
@@ -1546,7 +1547,9 @@ struct Index {
   private async startBackgroundTask(): Promise<void> {
     try {
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      await backgroundTaskManager.startBackgroundRunning(context);
+      let wantAgentObj = await this.buildLiveViewClickAction();
+      await backgroundTaskManager.startBackgroundRunning(context,
+        backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, wantAgentObj);
       console.info('startBackgroundTask succeeded');
     } catch (error) {
       console.error(`startBackgroundTask failed: ${JSON.stringify(error)}`);
