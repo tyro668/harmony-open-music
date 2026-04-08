@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "开心动听 - 一款精美的音乐播放应用"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "开心动听主入口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "开心动听"
+    }
+  ]
+}

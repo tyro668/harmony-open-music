@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Happy Music - A beautiful music player application"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Main entry of Happy Music"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Happy Music"
+    }
+  ]
+}

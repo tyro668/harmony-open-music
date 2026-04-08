@@ -1,0 +1,56 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BD1DDA70CA9E6851AE65ABAD9CA66F4DB5E86AF84994398CC763BB81CBC5993D67742CBBFA5D57E",
+          "profile": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.p12",
+          "storePassword": "0000001B2BAD33AC830F20DF2A230C2C0334E8F46BB8BD82576C69C3D13BA072B5D9F8D26C75F72CBA121B"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "6.0.2(22)",
+        "compatibleSdkVersion": "6.0.2(22)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}
