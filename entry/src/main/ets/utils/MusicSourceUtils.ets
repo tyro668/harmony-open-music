@@ -2,6 +2,7 @@ import {
   LxSourceParseResult,
   MusicQualityType,
   MusicSourceConfig,
+  MusicSourceTrack,
   MusicSourceQuality,
   PersistedMusicSourceConfig
 } from '../models/AppModels';
@@ -116,6 +117,19 @@ export function simpleHash(str: string): string {
     hash = hash & hash;
   }
   return Math.abs(hash).toString(36);
+}
+
+export function buildSourceTrackImportKey(track: MusicSourceTrack): string {
+  let identity = [
+    track.source,
+    track.id,
+    track.songmid,
+    track.hash,
+    track.name,
+    track.singer,
+    track.album
+  ].join('|');
+  return `source-import-${simpleHash(identity)}`;
 }
 
 export function sourceDisplayName(code: string): string {

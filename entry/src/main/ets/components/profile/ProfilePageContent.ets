@@ -4,13 +4,22 @@ import { MusicSourceConfig } from '../../models/AppModels';
 export struct ProfilePageContent {
   @Prop totalHours: number = 0;
   @Prop musicSources: MusicSourceConfig[] = [];
-  onOpenFavorites: () => void = () => {};
-  onOpenRecent: () => void = () => {};
+  @Prop importedTrackCount: number = 0;
+  @Prop playQueueTrackCount: number = 0;
+  @Prop bottomInset: number = 0;
   onImportLocal: () => void = () => {};
   onOpenOnlineDownload: () => void = () => {};
+  onOpenImportedTrackManager: () => void = () => {};
   onOpenSourceManager: () => void = () => {};
   onBrowseSource: (source: MusicSourceConfig) => void = (_: MusicSourceConfig) => {};
   onOpenEqualizer: () => void = () => {};
+
+  private importedTrackSubtitle(): string {
+    if (this.importedTrackCount === 0) {
+      return '管理已导入歌曲，并决定是否加入播放列表';
+    }
+    return `已导入 ${this.importedTrackCount} 首，当前在播放列表中 ${this.playQueueTrackCount} 首`;
+  }
 
   @Builder
   private sectionItem(title: string, subtitle: string, showDivider: boolean, action: () => void) {
@@ -47,55 +56,49 @@ export struct ProfilePageContent {
     }
   }
 
+  @Builder
+  private statsHeader() {
+    Row() {
+      Row({ space: 6 }) {
+        Image($r('app.media.ic_clock'))
+          .width(14)
+          .height(14)
+          .fillColor('#5DB8C9')
+
+        Text(`累计听歌 ${this.totalHours} 小时`)
+          .fontSize(12)
+          .fontColor('#8A8A8A')
+      }
+
+      Blank()
+
+      Text(`${this.importedTrackCount} 首已导入`)
+        .fontSize(12)
+        .fontColor('#8A8A8A')
+    }
+    .width('100%')
+    .height(42)
+  }
+
   build() {
     Scroll() {
-      Column({ space: 20 }) {
-        Row({ space: 18 }) {
-          Row() {
-            Image($r('app.media.ic_user'))
-              .width(34)
-              .height(34)
-              .opacity(0.7)
-          }
-          .width(84)
-          .height(84)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor('#242424')
-          .borderRadius(42)
-
-          Column({ space: 8 }) {
-            Text('本地听众')
-              .fontSize(26)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#F7F7F7')
-
-            Text(`听歌时长 ${this.totalHours} 小时`)
-              .fontSize(15)
-              .fontColor('#6C6C6C')
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-        }
-        .width('100%')
-
+      Column({ space: 0 }) {
         Column() {
-          this.sectionItem('我的收藏', '快速查看已标记喜欢的歌曲', true, () => {
-            this.onOpenFavorites();
-          })
-          this.sectionItem('最近播放', '回到最近听过的内容', false, () => {
-            this.onOpenRecent();
-          })
+          this.statsHeader()
         }
         .width('100%')
-        .backgroundColor('#171717')
-        .borderRadius(20)
+        .padding({ left: 16, right: 16, top: 14, bottom: 8 })
 
+        Column({ space: 20 }) {
         Column() {
           this.sectionItem('本地导入设置', '重新选择本地音乐文件', true, () => {
             this.onImportLocal();
           })
-          this.sectionItem('在线下载导入', '输入音频链接并自动加入曲库', false, () => {
+          this.sectionItem('在线下载导入', '输入音频链接并自动加入曲库', true, () => {
             this.onOpenOnlineDownload();
+          })
+          this.sectionItem('导入音乐管理', this.importedTrackSubtitle(), false, () => {
+            this.onOpenImportedTrackManager();
           })
         }
         .width('100%')
@@ -177,11 +180,18 @@ export struct ProfilePageContent {
         .width('100%')
         .backgroundColor('#171717')
         .borderRadius(20)
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16 })
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 26, bottom: 20 })
+      .constraintSize({ minHeight: '100%' })
+      .justifyContent(FlexAlign.Start)
+      .padding({ bottom: this.bottomInset + 20 })
     }
     .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .edgeEffect(EdgeEffect.None)
     .width('100%')
     .height('100%')
   }

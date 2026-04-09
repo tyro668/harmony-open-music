@@ -1,6 +1,7 @@
 import { media } from '@kit.MediaKit';
 import { common } from '@kit.AbilityKit';
 import { picker, fileUri } from '@kit.CoreFileKit';
+import { image } from '@kit.ImageKit';
 import { liveViewManager } from '@kit.LiveViewKit';
 import { preferences } from '@kit.ArkData';
 import { http } from '@kit.NetworkKit';
@@ -32,6 +33,7 @@ import {
 } from '../models/AppModels';
 import { ExploreHallPage } from '../components/explore/ExploreHallPage';
 import { HomeQueuePage } from '../components/home/HomeQueuePage';
+import { ImportedTrackManagerPanel } from '../components/profile/ImportedTrackManagerPanel';
 import { ProfilePageContent } from '../components/profile/ProfilePageContent';
 import { BottomNavigationBar } from '../components/shell/BottomNavigationBar';
 import { MiniPlayerBar } from '../components/shell/MiniPlayerBar';
@@ -42,8 +44,10 @@ import { QuickJsEngineAdapter, QuickJsHostEvent } from '../utils/QuickJsEngine';
 import { LX_PRELOAD_SCRIPT as USER_API_PRELOAD_SCRIPT } from '../utils/LxUserApiPreload';
 import {
   currentTrack as selectCurrentTrack,
+  moveTrackByReference,
   onlineDownloadFailureToast as buildOnlineDownloadFailureToast,
   playbackProgressRatio,
+  playQueueTracks as selectPlayQueueTracks,
   totalListeningHours,
   visibleTracks as selectVisibleTracks
 } from '../utils/LibraryStateUtils';
@@ -56,6 +60,7 @@ import {
   originFromUrl
 } from '../utils/TrackUtils';
 import {
+  buildSourceTrackImportKey,
   filterSupportedExploreSources,
   isSupportedExploreSource,
   sourceDisplayName
@@ -94,10 +99,27 @@ import {
   startAudioBackgroundTask,
   stopAudioBackgroundTask
 } from '../services/PlaybackPlatformService';
+import {
+  extractTrackArtwork,
+  releaseTrackArtwork as releaseExtractedTrackArtwork
+} from '../services/TrackArtworkService';
+
+class SourceImportTask {
+  key: string;
+  source: MusicSourceConfig;
+  track: MusicSourceTrack;
+
+  constructor(key: string, source: MusicSourceConfig, track: MusicSourceTrack) {
+    this.key = key;
+    this.source = source;
+    this.track = track;
+  }
+}
 
 @Entry
 @Component
 struct Index {
+  private readonly pageBottomInset: number = 188;
   @State activeMainTab: MainTab = MainTab.Home;
   @State activeLibraryDimension: LibraryDimension = LibraryDimension.Song;
   @State collectionMode: CollectionMode = CollectionMode.Library;
@@ -106,6 +128,7 @@ struct Index {
   @State currentTrackId: string = MINI_PLACEHOLDER_TRACK.id;
   @State searchKeyword: string = '';
   @State showOnlineDownloadPanel: boolean = false;
+  @State showImportedTrackManager: boolean = false;
   @State onlineDownloadUrl: string = '';
   @State onlineDownloadReferer: string = 'https://music.163.com/';
   @State onlineDownloadCookie: string = '';
@@ -122,6 +145,8 @@ struct Index {
   @State nextButtonScale: number = 1;
   @State playbackProgressMs: number = 0;
   @State playbackDurationMs: number = 0;
+  @State isSeekingPlayback: boolean = false;
+  @State seekPreviewMs: number = 0;
   @State totalListeningMs: number = LISTENING_SEED_MS;
   @State playMode: PlayMode = PlayMode.Sequential;
   @State showRenameDialog: boolean = false;
@@ -142,7 +167,7 @@ struct Index {
   @State sourceSearchKeyword: string = '';
   @State sourceCurrentPage: number = 1;
   @State sourceTotal: number = 0;
-  @State sourceDownloadingId: string = '';
+  @State sourceImportingTrackKeys: string[] = [];
   @State sourceBoardList: SourceBoardItem[] = [];
   @State sourceBoardsLoading: boolean = false;
   @State activeBoardId: string = '';
@@ -151,6 +176,7 @@ struct Index {
   @State sourceUpdateAlertName: string = '';
   @State sourceUpdateAlertLog: string = '';
   @State sourceUpdateAlertUrl: string = '';
+  @State trackArtworkIds: string[] = [];
 
   private jsEngineKey: string = '';
   private jsEngineSourceId: string = '';
@@ -158,6 +184,9 @@ struct Index {
   private jsEngineLastError: string = '';
   private quickJsEngine: QuickJsEngineAdapter | null = null;
   private musicSourceScripts: Map<string, string> = new Map();
+  private trackArtworkMap: Map<string, image.PixelMap> = new Map();
+  private trackArtworkLoadingIds: Set<string> = new Set();
+  private trackArtworkUnavailableIds: Set<string> = new Set();
 
   private player: media.AVPlayer | null = null;
   private openedFile: fs.File | null = null;
@@ -176,6 +205,8 @@ struct Index {
   private liveViewSequence: number = 0;
   private session: avSession.AVSession | null = null;
   private isBackgroundTaskRunning: boolean = false;
+  private sourceImportQueue: SourceImportTask[] = [];
+  private isProcessingSourceImportQueue: boolean = false;
 
   aboutToAppear(): void {
     if (this.hasInitializedState) {
@@ -187,12 +218,6 @@ struct Index {
 
   aboutToDisappear(): void {
     this.schedulePersistState();
-    void this.stopMusicLiveView();
-    void this.destroyAVSession();
-    this.resetQuickJsEngine();
-    this.releasePlayer().catch(() => {
-      console.error('release player failed');
-    });
   }
 
   build() {
@@ -213,19 +238,26 @@ struct Index {
           playButtonShowsPause: this.playButtonShowsPause,
           playButtonScale: this.playButtonScale,
           nextButtonScale: this.nextButtonScale,
-          progressRatio: playbackProgressRatio(this.playbackProgressMs, this.playbackDurationMs),
+          progressRatio: playbackProgressRatio(this.displayedPlaybackProgressMs(), this.playbackDurationMs),
+          playbackProgressMs: this.displayedPlaybackProgressMs(),
+          playbackDurationMs: this.playbackDurationMs,
+          coveredTrackIds: this.trackArtworkIds,
           onPlayPause: () => {
             void this.handleMiniPlayPause();
           },
           onNext: () => {
             void this.playNextTrack();
           },
+          onSeekChange: (value: number, mode: SliderChangeMode) => {
+            this.handleMiniSeekChange(value, mode);
+          },
           onPlayButtonTouch: (event: TouchEvent) => {
             this.handlePlayButtonTouch(event);
           },
           onNextButtonTouch: (event: TouchEvent) => {
             this.handleNextButtonTouch(event);
-          }
+          },
+          coverForTrack: (trackId: string) => this.trackArtworkForTrack(trackId)
         })
         BottomNavigationBar({
           activeMainTab: this.activeMainTab,
@@ -270,11 +302,13 @@ struct Index {
   @Builder
   private homePage() {
     HomeQueuePage({
-      tracks: selectVisibleTracks(this.localTracks, this.recentTrackIds, this.collectionMode, this.searchKeyword),
+      tracks: this.playQueueTracks(),
       currentTrackId: this.currentTrackId,
       playMode: this.playMode,
       showRenameDialog: this.showRenameDialog,
       renameText: this.renameText,
+      bottomInset: this.pageBottomInset,
+      coveredTrackIds: this.trackArtworkIds,
       onSelectPlayMode: (mode: PlayMode) => {
         this.playMode = mode;
         this.schedulePersistState();
@@ -301,7 +335,8 @@ struct Index {
       onConfirmRename: () => {
         this.applyRename();
       },
-      trackDurationText: (track: MusicTrack) => this.trackDurationText(track)
+      trackDurationText: (track: MusicTrack) => this.trackDurationText(track),
+      coverForTrack: (trackId: string) => this.trackArtworkForTrack(trackId)
     })
   }
 
@@ -317,11 +352,12 @@ struct Index {
         sourceSearchKeyword: this.sourceSearchKeyword,
         sourceCurrentPage: this.sourceCurrentPage,
         sourceTotal: this.sourceTotal,
-        sourceDownloadingId: this.sourceDownloadingId,
         sourceBoardList: this.sourceBoardList,
         sourceBoardsLoading: this.sourceBoardsLoading,
         activeBoardId: this.activeBoardId,
         exploreMode: this.exploreMode,
+        bottomInset: this.pageBottomInset,
+        sourceImportingTrackKeys: this.sourceImportingTrackKeys,
         onGoToProfile: () => {
           this.activeMainTab = MainTab.Profile;
         },
@@ -382,13 +418,15 @@ struct Index {
         onSearch: () => {
           let source = this.getExploreActiveSource();
           if (source) {
+            this.exploreMode = 'search';
             void this.searchSourceTracks(source, this.sourceSearchKeyword, this.activeSearchSource, 1);
           }
         },
         onSelectBoard: (board: SourceBoardItem) => {
-          if (this.activeBoardId === board.bangid) {
+          if (this.activeBoardId === board.bangid && this.exploreMode === 'board') {
             return;
           }
+          this.exploreMode = 'board';
           this.activeBoardId = board.bangid;
           this.sourceTracks = [];
           this.sourceCurrentPage = 1;
@@ -397,10 +435,10 @@ struct Index {
             void this.fetchBoardTracks(source, this.activeSearchSource, board.bangid, 1);
           }
         },
-        onPlayTrack: (track: MusicSourceTrack) => {
+        onImportTrack: (track: MusicSourceTrack) => {
           let source = this.getExploreActiveSource();
           if (source) {
-            void this.downloadAndPlaySourceTrack(source, track);
+            this.enqueueSourceTrackImport(source, track);
           }
         },
         onLoadMore: () => {
@@ -412,8 +450,11 @@ struct Index {
               void this.searchSourceTracks(source, this.sourceSearchKeyword, this.activeSearchSource, this.sourceCurrentPage + 1);
             }
           }
-        }
+        },
+        sourceTrackActionLabel: (track: MusicSourceTrack) => this.sourceTrackActionLabel(track),
+        sourceTrackActionEnabled: (track: MusicSourceTrack) => this.sourceTrackActionEnabled(track)
       })
+      
 
       if (this.showSourceManager) {
         SourceManagerPanel({
@@ -451,18 +492,9 @@ struct Index {
       ProfilePageContent({
         totalHours: totalListeningHours(this.totalListeningMs),
         musicSources: this.musicSources,
-        onOpenFavorites: () => {
-          this.collectionMode = CollectionMode.Favorites;
-          this.activeLibraryDimension = LibraryDimension.Song;
-          this.activeMainTab = MainTab.Home;
-          this.schedulePersistState();
-        },
-        onOpenRecent: () => {
-          this.collectionMode = CollectionMode.Recent;
-          this.activeLibraryDimension = LibraryDimension.Song;
-          this.activeMainTab = MainTab.Home;
-          this.schedulePersistState();
-        },
+        importedTrackCount: this.localTracks.length,
+        playQueueTrackCount: this.playQueueTracks().length,
+        bottomInset: this.pageBottomInset,
         onImportLocal: () => {
           void this.importLocalMusic();
         },
@@ -470,6 +502,9 @@ struct Index {
           this.activeMainTab = MainTab.Home;
           this.collectionMode = CollectionMode.Library;
           this.showOnlineDownloadPanel = true;
+        },
+        onOpenImportedTrackManager: () => {
+          this.showImportedTrackManager = true;
         },
         onOpenSourceManager: () => {
           this.showSourceManager = true;
@@ -508,6 +543,32 @@ struct Index {
         })
       }
 
+      if (this.showImportedTrackManager) {
+        ImportedTrackManagerPanel({
+          tracks: this.localTracks,
+          coveredTrackIds: this.trackArtworkIds,
+          onClose: () => {
+            this.showImportedTrackManager = false;
+          },
+          onMoveTrackBefore: (trackId: string, referenceTrackId: string) => {
+            this.moveImportedTrackBefore(trackId, referenceTrackId);
+          },
+          onMoveTrackAfter: (trackId: string, referenceTrackId: string) => {
+            this.moveImportedTrackAfter(trackId, referenceTrackId);
+          },
+          onToggleTrackInPlayQueue: (trackId: string) => {
+            this.toggleTrackInPlayQueue(trackId);
+          },
+          onRemoveTrack: (trackId: string) => {
+            void this.removeImportedTrack(trackId);
+          },
+          onRemoveTracks: (trackIds: string[]) => {
+            void this.removeImportedTracks(trackIds);
+          },
+          coverForTrack: (trackId: string) => this.trackArtworkForTrack(trackId)
+        })
+      }
+
       if (this.showSourceBrowser) {
         SourceBrowserPanel({
           title: this.getActiveSource()?.name ?? '音源浏览',
@@ -518,7 +579,7 @@ struct Index {
           sourceTracksLoading: this.sourceTracksLoading,
           sourceTotal: this.sourceTotal,
           sourceCurrentPage: this.sourceCurrentPage,
-          sourceDownloadingId: this.sourceDownloadingId,
+          sourceImportingTrackKeys: this.sourceImportingTrackKeys,
           onClose: () => {
             this.closeSourceBrowser();
           },
@@ -547,12 +608,14 @@ struct Index {
               void this.searchSourceTracks(source, this.sourceSearchKeyword, this.activeSearchSource, this.sourceCurrentPage + 1);
             }
           },
-          onPlayTrack: (track: MusicSourceTrack) => {
+          onImportTrack: (track: MusicSourceTrack) => {
             let source = this.getActiveSource();
             if (source) {
-              void this.downloadAndPlaySourceTrack(source, track);
+              this.enqueueSourceTrackImport(source, track);
             }
-          }
+          },
+          sourceTrackActionLabel: (track: MusicSourceTrack) => this.sourceTrackActionLabel(track),
+          sourceTrackActionEnabled: (track: MusicSourceTrack) => this.sourceTrackActionEnabled(track)
         })
       }
     }
@@ -568,8 +631,50 @@ struct Index {
     return selectCurrentTrack(this.localTracks, this.currentTrackId);
   }
 
+  private playQueueTracks(): Array<MusicTrack> {
+    return selectPlayQueueTracks(this.localTracks);
+  }
+
+  private firstPlayQueueTrack(): MusicTrack | null {
+    let queueTracks = this.playQueueTracks();
+    return queueTracks.length > 0 ? queueTracks[0] : null;
+  }
+
+  private syncCurrentTrackSelection(preferredTrackId: string = ''): void {
+    let current = this.localTracks.find((track: MusicTrack) => track.id === this.currentTrackId);
+    if (current) {
+      let isCurrentLoaded = this.loadedTrackId === current.id;
+      if (current.inPlayQueue !== false || isCurrentLoaded) {
+        return;
+      }
+    }
+
+    if (preferredTrackId.length > 0) {
+      let preferredTrack = this.localTracks.find((track: MusicTrack) => track.id === preferredTrackId);
+      if (preferredTrack && preferredTrack.inPlayQueue !== false) {
+        this.currentTrackId = preferredTrack.id;
+        return;
+      }
+    }
+
+    let firstTrack = this.firstPlayQueueTrack();
+    this.currentTrackId = firstTrack ? firstTrack.id : MINI_PLACEHOLDER_TRACK.id;
+  }
+
   private progressRatio(): number {
     return playbackProgressRatio(this.playbackProgressMs, this.playbackDurationMs);
+  }
+
+  private displayedPlaybackProgressMs(): number {
+    return this.isSeekingPlayback ? this.seekPreviewMs : this.playbackProgressMs;
+  }
+
+  private clampSeekMs(value: number): number {
+    let safeValue = Math.max(0, Math.floor(value));
+    if (this.playbackDurationMs <= 0) {
+      return safeValue;
+    }
+    return Math.min(safeValue, this.playbackDurationMs);
   }
 
   private setMiniPlayButtonState(showPause: boolean, transitioning: boolean): void {
@@ -583,6 +688,46 @@ struct Index {
 
   private handleNextButtonTouch(event: TouchEvent): void {
     this.nextButtonScale = event.type === TouchType.Down ? 0.92 : 1;
+  }
+
+  private handleMiniSeekChange(value: number, mode: SliderChangeMode): void {
+    let targetMs = this.clampSeekMs(value);
+    if (mode === SliderChangeMode.Begin) {
+      this.isSeekingPlayback = true;
+      this.seekPreviewMs = targetMs;
+      return;
+    }
+    if (mode === SliderChangeMode.Moving || mode === SliderChangeMode.Click) {
+      this.isSeekingPlayback = true;
+      this.seekPreviewMs = targetMs;
+      return;
+    }
+    if (mode === SliderChangeMode.End) {
+      this.seekPreviewMs = targetMs;
+      this.isSeekingPlayback = false;
+      void this.seekCurrentTrack(targetMs);
+    }
+  }
+
+  private async seekCurrentTrack(targetMs: number): Promise<void> {
+    if (!this.player || this.playbackDurationMs <= 0) {
+      return;
+    }
+    let state = this.player.state;
+    if (state !== 'prepared' && state !== 'playing' && state !== 'paused' && state !== 'completed') {
+      return;
+    }
+    let clampedTargetMs = this.clampSeekMs(targetMs);
+    try {
+      this.playbackProgressMs = clampedTargetMs;
+      this.lastProgressSnapshotMs = clampedTargetMs;
+      this.player.seek(clampedTargetMs);
+      void this.updateMusicLiveView(this.isPlaying);
+      void this.updateAVSessionState(this.isPlaying);
+    } catch (error) {
+      console.error(`seek failed: ${JSON.stringify(error)}`);
+      this.showToast('调整播放进度失败');
+    }
   }
 
   private async startMusicLiveView(track: MusicTrack): Promise<void> {
@@ -849,6 +994,7 @@ struct Index {
       console.error(`initialize app state failed: ${JSON.stringify(error)}`);
     } finally {
       this.isRestoringState = false;
+      this.syncTrackArtworkCache();
     }
   }
 
@@ -887,6 +1033,78 @@ struct Index {
     this.playMode = restoredState.playMode;
     this.musicSources = restoredState.musicSources;
     this.musicSourceScripts = restoredState.musicSourceScripts;
+    this.syncCurrentTrackSelection();
+  }
+
+  private trackArtworkForTrack(trackId: string): image.PixelMap | null {
+    return this.trackArtworkMap.get(trackId) ?? null;
+  }
+
+  private refreshTrackArtworkIds(): void {
+    this.trackArtworkIds = this.localTracks.filter((track: MusicTrack) => this.trackArtworkMap.has(track.id))
+      .map((track: MusicTrack) => track.id);
+  }
+
+  private syncTrackArtworkCache(): void {
+    let activeTrackIds = this.localTracks.map((track: MusicTrack) => track.id);
+
+    Array.from(this.trackArtworkMap.keys()).forEach((trackId: string) => {
+      if (activeTrackIds.indexOf(trackId) < 0) {
+        void this.releaseCachedTrackArtwork(trackId);
+      }
+    });
+
+    Array.from(this.trackArtworkLoadingIds).forEach((trackId: string) => {
+      if (activeTrackIds.indexOf(trackId) < 0) {
+        this.trackArtworkLoadingIds.delete(trackId);
+      }
+    });
+
+    Array.from(this.trackArtworkUnavailableIds).forEach((trackId: string) => {
+      if (activeTrackIds.indexOf(trackId) < 0) {
+        this.trackArtworkUnavailableIds.delete(trackId);
+      }
+    });
+
+    this.localTracks.forEach((track: MusicTrack) => {
+      let hasPlayableFile = track.filePath.length > 0 || track.sourceUri.length > 0;
+      if (!hasPlayableFile || this.trackArtworkMap.has(track.id) || this.trackArtworkLoadingIds.has(track.id) ||
+        this.trackArtworkUnavailableIds.has(track.id)) {
+        return;
+      }
+      void this.loadTrackArtwork(track);
+    });
+  }
+
+  private async loadTrackArtwork(track: MusicTrack): Promise<void> {
+    this.trackArtworkLoadingIds.add(track.id);
+    try {
+      let pixelMap = await extractTrackArtwork(track);
+      if (!this.localTracks.some((item: MusicTrack) => item.id === track.id)) {
+        await releaseExtractedTrackArtwork(pixelMap);
+        return;
+      }
+      if (pixelMap === null) {
+        this.trackArtworkUnavailableIds.add(track.id);
+        return;
+      }
+      let previous = this.trackArtworkMap.get(track.id);
+      this.trackArtworkMap.set(track.id, pixelMap);
+      this.trackArtworkUnavailableIds.delete(track.id);
+      this.refreshTrackArtworkIds();
+      await releaseExtractedTrackArtwork(previous);
+    } finally {
+      this.trackArtworkLoadingIds.delete(track.id);
+    }
+  }
+
+  private async releaseCachedTrackArtwork(trackId: string): Promise<void> {
+    let pixelMap = this.trackArtworkMap.get(trackId);
+    this.trackArtworkMap.delete(trackId);
+    this.trackArtworkLoadingIds.delete(trackId);
+    this.trackArtworkUnavailableIds.delete(trackId);
+    this.refreshTrackArtworkIds();
+    await releaseExtractedTrackArtwork(pixelMap);
   }
 
   private async persistUriPermissions(uris: Array<string>): Promise<void> {
@@ -957,19 +1175,18 @@ struct Index {
       uris.forEach((uri: string) => {
         let duplicated = mergedTracks.some((track: MusicTrack) => track.sourceUri === uri);
         if (!duplicated) {
-          mergedTracks.unshift(buildImportedTrack(uri, mergedTracks.length));
+          mergedTracks.push(buildImportedTrack(uri, mergedTracks.length));
           importedCount += 1;
           newUris.push(uri);
         }
       });
 
       this.localTracks = mergedTracks;
+      this.syncTrackArtworkCache();
       this.collectionMode = CollectionMode.Library;
       this.activeLibraryDimension = LibraryDimension.Song;
       this.activeMainTab = MainTab.Home;
-      if (this.localTracks.length > 0 && this.currentTrackId === MINI_PLACEHOLDER_TRACK.id) {
-        this.currentTrackId = this.localTracks[0].id;
-      }
+      this.syncCurrentTrackSelection();
       await this.persistUriPermissions(newUris);
       this.schedulePersistState();
       if (importedCount > 0) {
@@ -1075,7 +1292,8 @@ struct Index {
       let importedTrack = buildDownloadedTrack(targetPath, trimmedUrl, this.localTracks.length);
       let alreadyExists = this.localTracks.some((track: MusicTrack) => track.filePath === targetPath);
       if (!alreadyExists) {
-        this.localTracks = [importedTrack].concat(this.localTracks);
+        this.localTracks = this.localTracks.concat([importedTrack]);
+        this.syncTrackArtworkCache();
       }
       this.collectionMode = CollectionMode.Library;
       this.activeLibraryDimension = LibraryDimension.Song;
@@ -1440,13 +1658,90 @@ struct Index {
     }
   }
 
-  private async downloadAndPlaySourceTrack(source: MusicSourceConfig, track: MusicSourceTrack): Promise<void> {
-    if (this.sourceDownloadingId.length > 0) {
-      this.showToast('正在下载中，请稍候');
+  private sourceTrackImportKey(track: MusicSourceTrack): string {
+    return buildSourceTrackImportKey(track);
+  }
+
+  private isSourceTrackQueued(track: MusicSourceTrack): boolean {
+    return this.sourceImportingTrackKeys.indexOf(this.sourceTrackImportKey(track)) >= 0;
+  }
+
+  private findImportedSourceTrack(track: MusicSourceTrack): MusicTrack | undefined {
+    let importKey = this.sourceTrackImportKey(track);
+    return this.localTracks.find((item: MusicTrack) => {
+      if ((item.sourceImportKey ?? '') === importKey) {
+        return true;
+      }
+      return item.folder === 'downloads' && item.title === track.name && item.artist === track.singer && item.album === track.album;
+    });
+  }
+
+  private sourceTrackActionLabel(track: MusicSourceTrack): string {
+    if (this.findImportedSourceTrack(track)) {
+      return '已导入';
+    }
+    if (this.isSourceTrackQueued(track)) {
+      return '导入中';
+    }
+    return '导入';
+  }
+
+  private sourceTrackActionEnabled(track: MusicSourceTrack): boolean {
+    return this.sourceTrackActionLabel(track) === '导入';
+  }
+
+  private enqueueSourceTrackImport(source: MusicSourceConfig, track: MusicSourceTrack): void {
+    if (this.findImportedSourceTrack(track)) {
+      this.showToast(`「${track.name}」已导入`);
       return;
     }
-    this.sourceDownloadingId = track.id;
+    let importKey = this.sourceTrackImportKey(track);
+    if (this.sourceImportingTrackKeys.indexOf(importKey) >= 0) {
+      return;
+    }
+    this.sourceImportQueue.push(new SourceImportTask(importKey, source, track));
+    this.sourceImportingTrackKeys = this.sourceImportingTrackKeys.concat([importKey]);
+    this.showToast(`已加入导入队列: 「${track.name}」`);
+    void this.processSourceImportQueue();
+  }
+
+  private async processSourceImportQueue(): Promise<void> {
+    if (this.isProcessingSourceImportQueue) {
+      return;
+    }
+    this.isProcessingSourceImportQueue = true;
     try {
+      while (this.sourceImportQueue.length > 0) {
+        let task = this.sourceImportQueue.shift();
+        if (!task) {
+          continue;
+        }
+        await this.importSourceTrack(task.source, task.track, task.key);
+      }
+    } finally {
+      this.isProcessingSourceImportQueue = false;
+    }
+  }
+
+  private async importSourceTrack(source: MusicSourceConfig, track: MusicSourceTrack, importKey: string): Promise<void> {
+    try {
+      let existingTrack = this.findImportedSourceTrack(track);
+      if (existingTrack) {
+        if ((existingTrack.sourceImportKey ?? '').length === 0) {
+          let existingTrackId = existingTrack.id;
+          let localIndex = this.localTracks.findIndex((item: MusicTrack) => item.id === existingTrackId);
+          if (localIndex >= 0) {
+            let updatedTracks = this.localTracks.slice();
+            let updatedTrack = copyTrack(updatedTracks[localIndex]);
+            updatedTrack.sourceImportKey = importKey;
+            updatedTracks[localIndex] = updatedTrack;
+            this.localTracks = updatedTracks;
+            this.schedulePersistState();
+          }
+        }
+        return;
+      }
+
       let quality = resolveSourceTrackQuality(source, track);
       let musicUrl = await this.requestMusicUrlFromEngine(source, track, quality);
       if (!musicUrl || musicUrl.length === 0) {
@@ -1503,34 +1798,28 @@ struct Index {
         filePath: targetPath,
         rawFileName: '',
         accentColor: COLOR_PALETTE[this.localTracks.length % COLOR_PALETTE.length],
+        pic: track.pic ?? '',
         isFavorite: false,
         isImported: true,
+        inPlayQueue: true,
         playCount: 0,
-        lastPlayedAt: 0
+        lastPlayedAt: 0,
+        sourceImportKey: importKey
       };
 
-      let alreadyExists = this.localTracks.some((t: MusicTrack) => t.title === track.name && t.artist === track.singer);
+      let alreadyExists = this.findImportedSourceTrack(track);
       if (!alreadyExists) {
-        this.localTracks = [importedTrack].concat(this.localTracks);
+        this.localTracks = this.localTracks.concat([importedTrack]);
+        this.syncTrackArtworkCache();
       }
-      this.currentTrackId = alreadyExists ? this.currentTrackId : importedTrack.id;
-      this.collectionMode = CollectionMode.Library;
-      this.activeLibraryDimension = LibraryDimension.Song;
       this.schedulePersistState();
-
-      if (!alreadyExists) {
-        let targetTrack = this.localTracks.find((t: MusicTrack) => t.id === importedTrack.id);
-        if (targetTrack) {
-          await this.startTrackPlayback(targetTrack);
-        }
-      }
       this.showToast(`已导入「${track.name}」`);
     } catch (error) {
       let errMessage = (error instanceof Error) ? error.message : String(error);
-      console.error(`download source track failed: ${errMessage}`);
-      this.showToast(`获取播放地址失败: ${errMessage}`);
+      console.error(`import source track failed: ${errMessage}`);
+      this.showToast(`导入失败: ${errMessage}`);
     } finally {
-      this.sourceDownloadingId = '';
+      this.sourceImportingTrackKeys = this.sourceImportingTrackKeys.filter((key: string) => key !== importKey);
     }
   }
 
@@ -1570,16 +1859,17 @@ struct Index {
 
   private async handleMiniPlayPause(): Promise<void> {
     let track = this.currentTrack();
-    if (!track.isImported) {
-      if (this.localTracks.length === 0) {
-        this.showToast('请先导入本地音乐，再从底部播放器继续播放');
+    let queueTracks = this.playQueueTracks();
+    let isLoadedTrack = this.loadedTrackId === track.id;
+    if ((!track.isImported || track.inPlayQueue === false) && !isLoadedTrack) {
+      if (queueTracks.length === 0) {
+        this.showToast('播放列表为空，请先在“我的”页把歌曲加入播放列表');
         return;
       }
-      await this.startTrackPlayback(this.localTracks[0]);
+      await this.startTrackPlayback(queueTracks[0]);
       return;
     }
 
-    let isLoadedTrack = this.loadedTrackId === track.id;
     if (this.isPlaying && isLoadedTrack) {
       await this.pauseCurrentTrack();
     } else if (this.player && isLoadedTrack && this.player.state === 'paused') {
@@ -1590,32 +1880,146 @@ struct Index {
   }
 
   private async shufflePlayAll(): Promise<void> {
-    if (this.localTracks.length === 0) {
-      this.showToast('请先导入本地音乐，再开始随机播放');
+    let queueTracks = this.playQueueTracks();
+    if (queueTracks.length === 0) {
+      this.showToast('播放列表为空，请先在“我的”页把歌曲加入播放列表');
       return;
     }
-    let randomIndex = Math.floor(Math.random() * this.localTracks.length);
-    await this.startTrackPlayback(this.localTracks[randomIndex]);
+    let randomIndex = Math.floor(Math.random() * queueTracks.length);
+    await this.startTrackPlayback(queueTracks[randomIndex]);
   }
 
   private async playNextTrack(): Promise<void> {
-    if (this.localTracks.length === 0) {
-      this.showToast('当前没有可连续播放的本地音乐');
+    let queueTracks = this.playQueueTracks();
+    if (queueTracks.length === 0) {
+      this.showToast('当前播放列表为空');
       return;
     }
-    let index = this.localTracks.findIndex((track: MusicTrack) => track.id === this.currentTrackId);
+    let index = queueTracks.findIndex((track: MusicTrack) => track.id === this.currentTrackId);
     if (this.playMode === PlayMode.Shuffle) {
-      let randomIndex = Math.floor(Math.random() * this.localTracks.length);
-      if (this.localTracks.length > 1 && randomIndex === index) {
-        randomIndex = (randomIndex + 1) % this.localTracks.length;
+      let randomIndex = Math.floor(Math.random() * queueTracks.length);
+      if (queueTracks.length > 1 && randomIndex === index) {
+        randomIndex = (randomIndex + 1) % queueTracks.length;
       }
-      await this.startTrackPlayback(this.localTracks[randomIndex]);
+      await this.startTrackPlayback(queueTracks[randomIndex]);
     } else if (this.playMode === PlayMode.Loop) {
       let currentIndex = index >= 0 ? index : 0;
-      await this.startTrackPlayback(this.localTracks[currentIndex]);
+      await this.startTrackPlayback(queueTracks[currentIndex]);
     } else {
-      let nextIndex = index >= 0 ? (index + 1) % this.localTracks.length : 0;
-      await this.startTrackPlayback(this.localTracks[nextIndex]);
+      let nextIndex = index >= 0 ? (index + 1) % queueTracks.length : 0;
+      await this.startTrackPlayback(queueTracks[nextIndex]);
+    }
+  }
+
+  private toggleTrackInPlayQueue(trackId: string): void {
+    let trackIndex = this.localTracks.findIndex((track: MusicTrack) => track.id === trackId);
+    if (trackIndex < 0) {
+      return;
+    }
+    let updatedTracks = this.localTracks.slice();
+    let selectedTrack = copyTrack(updatedTracks[trackIndex]);
+    selectedTrack.inPlayQueue = !selectedTrack.inPlayQueue;
+    updatedTracks[trackIndex] = selectedTrack;
+    this.localTracks = updatedTracks;
+
+    if (selectedTrack.inPlayQueue) {
+      this.syncCurrentTrackSelection(selectedTrack.id);
+    } else {
+      this.syncCurrentTrackSelection();
+    }
+
+    this.schedulePersistState();
+    this.showToast(selectedTrack.inPlayQueue ?
+      `已将「${selectedTrack.title}」加入播放列表` :
+      `已将「${selectedTrack.title}」移出播放列表`);
+  }
+
+  private moveImportedTrackBefore(trackId: string, referenceTrackId: string): void {
+    let nextTracks = moveTrackByReference(this.localTracks, trackId, referenceTrackId, false);
+    if (nextTracks === this.localTracks) {
+      return;
+    }
+    this.localTracks = nextTracks;
+    this.schedulePersistState();
+  }
+
+  private moveImportedTrackAfter(trackId: string, referenceTrackId: string): void {
+    let nextTracks = moveTrackByReference(this.localTracks, trackId, referenceTrackId, true);
+    if (nextTracks === this.localTracks) {
+      return;
+    }
+    this.localTracks = nextTracks;
+    this.schedulePersistState();
+  }
+
+  private deleteManagedTrackFile(track: MusicTrack): void {
+    if (track.sourceUri.length > 0 || track.filePath.length === 0) {
+      return;
+    }
+    try {
+      let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      if (!track.filePath.startsWith(context.filesDir)) {
+        return;
+      }
+      if (fs.accessSync(track.filePath)) {
+        fs.unlinkSync(track.filePath);
+      }
+    } catch (error) {
+      console.error(`delete managed track file failed: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private async removeImportedTrack(trackId: string): Promise<void> {
+    await this.removeImportedTracks([trackId]);
+  }
+
+  private async removeImportedTracks(trackIds: string[]): Promise<void> {
+    let targetIds = trackIds.filter((trackId: string, index: number) =>
+      trackId.length > 0 && trackIds.indexOf(trackId) === index
+    );
+    if (targetIds.length === 0) {
+      return;
+    }
+
+    let removedTracks = this.localTracks.filter((item: MusicTrack) => targetIds.indexOf(item.id) >= 0);
+    if (removedTracks.length === 0) {
+      return;
+    }
+
+    let shouldReleaseCurrent = removedTracks.some((track: MusicTrack) => track.id === this.loadedTrackId);
+    if (shouldReleaseCurrent) {
+      await this.releasePlayer();
+      this.playbackProgressMs = 0;
+      this.playbackDurationMs = 0;
+    }
+
+    this.localTracks = this.localTracks.filter((item: MusicTrack) => targetIds.indexOf(item.id) < 0);
+    this.syncTrackArtworkCache();
+    this.recentTrackIds = this.recentTrackIds.filter((itemId: string) => targetIds.indexOf(itemId) < 0);
+    if (targetIds.indexOf(this.renameTrackId) >= 0) {
+      this.showRenameDialog = false;
+      this.renameTrackId = '';
+      this.renameText = '';
+    }
+    if (targetIds.indexOf(this.menuTrackId) >= 0) {
+      this.showTrackMenu = false;
+      this.menuTrackId = '';
+    }
+    if (targetIds.indexOf(this.currentTrackId) >= 0) {
+      this.currentTrackId = MINI_PLACEHOLDER_TRACK.id;
+    }
+
+    removedTracks.forEach((track: MusicTrack) => {
+      this.deleteManagedTrackFile(track);
+    });
+
+    this.syncCurrentTrackSelection();
+    this.schedulePersistState();
+
+    if (removedTracks.length === 1) {
+      this.showToast(`已移除「${removedTracks[0].title}」`);
+    } else {
+      this.showToast(`已批量移除 ${removedTracks.length} 首歌曲`);
     }
   }
 
@@ -1672,6 +2076,8 @@ struct Index {
     this.pushRecentTrack(track.id);
     this.playbackProgressMs = 0;
     this.playbackDurationMs = 0;
+    this.isSeekingPlayback = false;
+    this.seekPreviewMs = 0;
     this.lastProgressSnapshotMs = 0;
     this.setMiniPlayButtonState(true, true);
     this.schedulePersistState();
@@ -1835,6 +2241,19 @@ struct Index {
       }
     });
 
+    player.on('seekDone', (time: number) => {
+      if (sessionId !== this.playerSession) {
+        return;
+      }
+      let actualTime = player.currentTime >= 0 ? player.currentTime : time;
+      this.playbackProgressMs = actualTime;
+      this.lastProgressSnapshotMs = actualTime;
+      if (!this.isSeekingPlayback) {
+        void this.updateMusicLiveView(this.isPlaying);
+        void this.updateAVSessionState(this.isPlaying);
+      }
+    });
+
     player.on('durationUpdate', (duration: number) => {
       if (sessionId !== this.playerSession) {
         return;
@@ -1904,6 +2323,8 @@ struct Index {
     this.openedRawFileName = '';
     this.loadedTrackId = '';
     this.isPlaying = false;
+    this.isSeekingPlayback = false;
+    this.seekPreviewMs = 0;
     this.setMiniPlayButtonState(false, false);
     this.autoPlayAfterPrepare = false;
     this.lastProgressSnapshotMs = 0;

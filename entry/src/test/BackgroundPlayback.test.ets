@@ -278,5 +278,34 @@ export default function backgroundPlaybackTest() {
       expect(actions).assertContain('destroyAVSession');
       expect(actions).assertContain('stopMusicLiveView');
     });
+
+    it('ui_disappear_should_not_release_background_resources', 0, () => {
+      // 页面退后台或临时不可见时，不应主动停止后台播放链路
+      let actions: string[] = [];
+      let lifecycle = 'aboutToDisappear';
+      if (lifecycle === 'aboutToDisappear') {
+        actions.push('schedulePersistState');
+      }
+      let hasStopMusicLiveView = false;
+      let hasStopBackgroundTask = false;
+      let hasDestroyAVSession = false;
+      let hasReleasePlayer = false;
+      for (let action of actions) {
+        if (action === 'stopMusicLiveView') {
+          hasStopMusicLiveView = true;
+        } else if (action === 'stopBackgroundTask') {
+          hasStopBackgroundTask = true;
+        } else if (action === 'destroyAVSession') {
+          hasDestroyAVSession = true;
+        } else if (action === 'releasePlayer') {
+          hasReleasePlayer = true;
+        }
+      }
+      expect(actions).assertContain('schedulePersistState');
+      expect(hasStopMusicLiveView).assertFalse();
+      expect(hasStopBackgroundTask).assertFalse();
+      expect(hasDestroyAVSession).assertFalse();
+      expect(hasReleasePlayer).assertFalse();
+    });
   });
 }

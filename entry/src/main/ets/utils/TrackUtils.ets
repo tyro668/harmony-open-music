@@ -14,10 +14,13 @@ export function copyTrack(track: MusicTrack): MusicTrack {
     filePath: track.filePath,
     rawFileName: track.rawFileName ?? '',
     accentColor: track.accentColor,
+    pic: track.pic ?? '',
     isFavorite: track.isFavorite,
     isImported: track.isImported,
+    inPlayQueue: track.inPlayQueue !== false,
     playCount: track.playCount,
-    lastPlayedAt: track.lastPlayedAt
+    lastPlayedAt: track.lastPlayedAt,
+    sourceImportKey: track.sourceImportKey
   };
 }
 
@@ -124,8 +127,10 @@ export function buildDownloadedTrack(filePath: string, downloadUrl: string, curr
     filePath: filePath,
     rawFileName: '',
     accentColor: colorForSeed(downloadUrl),
+    pic: '',
     isFavorite: false,
     isImported: true,
+    inPlayQueue: true,
     playCount: 0,
     lastPlayedAt: 0
   };
@@ -155,8 +160,10 @@ export function buildImportedTrack(uri: string, currentCount: number): MusicTrac
     filePath: realPath,
     rawFileName: '',
     accentColor: colorForSeed(uri),
+    pic: '',
     isFavorite: false,
     isImported: true,
+    inPlayQueue: true,
     playCount: 0,
     lastPlayedAt: 0
   };

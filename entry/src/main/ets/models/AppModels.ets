@@ -154,10 +154,13 @@ export interface MusicTrack {
   filePath: string;
   rawFileName: string;
   accentColor: string;
+  pic: string;
   isFavorite: boolean;
   isImported: boolean;
+  inPlayQueue: boolean;
   playCount: number;
   lastPlayedAt: number;
+  sourceImportKey?: string;
 }
 
 export interface LibraryGroup {

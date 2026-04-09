@@ -89,7 +89,7 @@ export const HOME_DIMENSION_TABS: Array<DimensionTabItem> = [
   { value: LibraryDimension.Folder, label: '文件夹' }
 ];
 export const MAIN_TABS: Array<MainTabItem> = [
-  { value: MainTab.Home, label: '首页', icon: $r('app.media.ic_home') },
+  { value: MainTab.Home, label: '播放', icon: $r('app.media.ic_home') },
   { value: MainTab.Explore, label: '音乐厅', icon: $r('app.media.ic_discover') },
   { value: MainTab.Profile, label: '我的', icon: $r('app.media.ic_user') }
 ];
@@ -103,8 +103,10 @@ export const MINI_PLACEHOLDER_TRACK: MusicTrack = {
   filePath: '',
   rawFileName: '',
   accentColor: '#3A3A3A',
+  pic: '',
   isFavorite: false,
   isImported: false,
+  inPlayQueue: false,
   playCount: 0,
   lastPlayedAt: 0
 };

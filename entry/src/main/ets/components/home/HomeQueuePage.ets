@@ -1,3 +1,5 @@
+import { image } from '@kit.ImageKit';
+
 import { MusicTrack, PlayMode } from '../../models/AppModels';
 
 @Component
@@ -7,6 +9,8 @@ export struct HomeQueuePage {
   @Prop playMode: PlayMode = PlayMode.Sequential;
   @Prop showRenameDialog: boolean = false;
   @Prop renameText: string = '';
+  @Prop bottomInset: number = 0;
+  @Prop coveredTrackIds: string[] = [];
   onSelectPlayMode: (mode: PlayMode) => void = (_: PlayMode) => {};
   onTrackTap: (track: MusicTrack) => void = (_: MusicTrack) => {};
   onToggleFavorite: (trackId: string) => void = (_: string) => {};
@@ -15,23 +19,32 @@ export struct HomeQueuePage {
   onCancelRename: () => void = () => {};
   onConfirmRename: () => void = () => {};
   trackDurationText: (track: MusicTrack) => string = (_: MusicTrack) => '--:--';
+  coverForTrack: (trackId: string) => image.PixelMap | null = (_: string) => null;
+
+  private hasTrackCover(trackId: string): boolean {
+    return this.coveredTrackIds.indexOf(trackId) >= 0 && this.coverForTrack(trackId) !== null;
+  }
+
+  private trackCover(trackId: string): image.PixelMap {
+    return this.coverForTrack(trackId) as image.PixelMap;
+  }
 
   @Builder
   private playModeButton(label: string, icon: Resource, mode: PlayMode) {
     Row({ space: 5 }) {
       Image(icon)
-        .width(14)
-        .height(14)
+        .width(13)
+        .height(13)
         .fillColor(this.playMode === mode ? '#FFFFFF' : '#8A8A8A')
 
       Text(label)
-        .fontSize(13)
+        .fontSize(12)
         .fontColor(this.playMode === mode ? '#FFFFFF' : '#8A8A8A')
         .fontWeight(this.playMode === mode ? FontWeight.Medium : FontWeight.Normal)
     }
-    .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+    .padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .backgroundColor(this.playMode === mode ? '#1DB4B4' : Color.Transparent)
-    .borderRadius(19)
+    .borderRadius(17)
     .onClick(() => {
       this.onSelectPlayMode(mode);
     })
@@ -39,56 +52,79 @@ export struct HomeQueuePage {
 
   @Builder
   private playlistHeader() {
-    Column({ space: 14 }) {
-      Row() {
-        Column({ space: 6 }) {
-          Text('播放队列')
-            .fontSize(28)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#F9F9F9')
+    Row() {
+      Row({ space: 6 }) {
+        Image($r('app.media.ic_list'))
+          .width(14)
+          .height(14)
+          .fillColor('#5DB8C9')
 
-          Row({ space: 6 }) {
-            Image($r('app.media.ic_list'))
-              .width(16)
-              .height(16)
-              .fillColor('#5DB8C9')
-
-            Text(`共 ${this.tracks.length} 首歌曲`)
-              .fontSize(13)
-              .fontColor('#8A8A8A')
-          }
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        Row({ space: 0 }) {
-          this.playModeButton('随机', $r('app.media.ic_shuffle'), PlayMode.Shuffle)
-          this.playModeButton('顺序', $r('app.media.ic_sequential'), PlayMode.Sequential)
-          this.playModeButton('循环', $r('app.media.ic_loop'), PlayMode.Loop)
-        }
-        .backgroundColor('#1A1A2E')
-        .borderRadius(22)
-        .padding(3)
+        Text(`共 ${this.tracks.length} 首歌曲`)
+          .fontSize(12)
+          .fontColor('#8A8A8A')
       }
-      .width('100%')
+      .layoutWeight(1)
+
+      Row({ space: 0 }) {
+        this.playModeButton('随机', $r('app.media.ic_shuffle'), PlayMode.Shuffle)
+        this.playModeButton('顺序', $r('app.media.ic_sequential'), PlayMode.Sequential)
+        this.playModeButton('循环', $r('app.media.ic_loop'), PlayMode.Loop)
+      }
+      .backgroundColor('#1A1A2E')
+      .borderRadius(20)
+      .padding(3)
     }
     .width('100%')
-    .padding({ bottom: 10 })
+    .height(42)
   }
 
   @Builder
   private coverArt(track: MusicTrack, size: number) {
-    Row() {
-      Image($r('app.media.ic_note'))
-        .width(size * 0.34)
-        .height(size * 0.34)
-        .opacity(0.45)
+    if (this.hasTrackCover(track.id)) {
+      Stack() {
+        Row()
+          .width(size)
+          .height(size)
+          .backgroundColor(track.accentColor)
+          .borderRadius(14)
+
+        Image(this.trackCover(track.id))
+          .width(size)
+          .height(size)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(14)
+      }
+      .width(size)
+      .height(size)
+    } else if (track.pic.length > 0) {
+      Stack() {
+        Row()
+          .width(size)
+          .height(size)
+          .backgroundColor(track.accentColor)
+          .borderRadius(14)
+
+        Image(track.pic)
+          .width(size)
+          .height(size)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(14)
+      }
+      .width(size)
+      .height(size)
+    } else {
+      Row() {
+        Image($r('app.media.ic_note'))
+          .width(size * 0.34)
+          .height(size * 0.34)
+          .opacity(0.45)
+      }
+      .width(size)
+      .height(size)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(track.accentColor)
+      .borderRadius(14)
     }
-    .width(size)
-    .height(size)
-    .justifyContent(FlexAlign.Center)
-    .backgroundColor(track.accentColor)
-    .borderRadius(14)
   }
 
   @Builder
@@ -249,10 +285,15 @@ export struct HomeQueuePage {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-        Column({ space: 4 }) {
+      Column({ space: 0 }) {
+        Column() {
           this.playlistHeader()
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 14, bottom: 8 })
 
+        Scroll() {
+          Column({ space: 4 }) {
           if (this.tracks.length === 0) {
             this.emptyState()
           } else {
@@ -260,15 +301,18 @@ export struct HomeQueuePage {
               this.trackRow(track)
             }, (track: MusicTrack) => track.id)
           }
+          }
+          .width('100%')
+          .constraintSize({ minHeight: '100%' })
+          .justifyContent(FlexAlign.Start)
+          .padding({ left: 16, right: 16, bottom: this.bottomInset + 20 })
         }
         .width('100%')
-        .constraintSize({ minHeight: '100%' })
-        .justifyContent(FlexAlign.Start)
-        .padding({ left: 12, right: 12, top: 14, bottom: 20 })
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
+        .align(Alignment.Top)
+        .edgeEffect(EdgeEffect.None)
       }
-      .scrollBar(BarState.Off)
-      .align(Alignment.Top)
-      .edgeEffect(EdgeEffect.None)
       .width('100%')
       .height('100%')
 

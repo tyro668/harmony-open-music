@@ -11,18 +11,52 @@ export struct SourceBrowserPanel {
   @Prop sourceTracksLoading: boolean = false;
   @Prop sourceTotal: number = 0;
   @Prop sourceCurrentPage: number = 1;
-  @Prop sourceDownloadingId: string = '';
+  @Prop sourceImportingTrackKeys: string[] = [];
   onClose: () => void = () => {};
   onSelectSubSource: (sourceCode: string) => void = (_: string) => {};
   onSearchKeywordChange: (value: string) => void = (_: string) => {};
   onSearch: () => void = () => {};
   onLoadMore: () => void = () => {};
-  onPlayTrack: (track: MusicSourceTrack) => void = (_: MusicSourceTrack) => {};
+  onImportTrack: (track: MusicSourceTrack) => void = (_: MusicSourceTrack) => {};
+  sourceTrackActionLabel: (track: MusicSourceTrack) => string = (_: MusicSourceTrack) => '导入';
+  sourceTrackActionEnabled: (track: MusicSourceTrack) => boolean = (_: MusicSourceTrack) => true;
 
   private formatDuration(seconds: number): string {
     let minutes = Math.floor(seconds / 60);
     let remainSeconds = seconds % 60;
     return `${minutes}:${remainSeconds < 10 ? '0' : ''}${remainSeconds}`;
+  }
+
+  private resolvedTrackActionLabel(track: MusicSourceTrack): string {
+    let importQueueSnapshot = this.sourceImportingTrackKeys.join('|');
+    return importQueueSnapshot.length < 0 ? '导入' : this.sourceTrackActionLabel(track);
+  }
+
+  private resolvedTrackActionEnabled(track: MusicSourceTrack): boolean {
+    let importQueueSnapshot = this.sourceImportingTrackKeys.join('|');
+    return importQueueSnapshot.length < 0 ? true : this.sourceTrackActionEnabled(track);
+  }
+
+  private importButtonBackground(track: MusicSourceTrack): string {
+    let label = this.resolvedTrackActionLabel(track);
+    if (label === '已导入') {
+      return '#213126';
+    }
+    if (label === '导入中') {
+      return '#1E3A4A';
+    }
+    return '#5DB8C9';
+  }
+
+  private importButtonFontColor(track: MusicSourceTrack): string {
+    let label = this.resolvedTrackActionLabel(track);
+    if (label === '已导入') {
+      return '#9FD3AC';
+    }
+    if (label === '导入中') {
+      return '#7FB2BB';
+    }
+    return '#050505';
   }
 
   build() {
@@ -176,23 +210,19 @@ export struct SourceBrowserPanel {
                   .alignItems(HorizontalAlign.Start)
                   .layoutWeight(1)
 
-                  if (this.sourceDownloadingId === track.id) {
-                    LoadingProgress()
-                      .width(24)
-                      .height(24)
-                      .color('#5DB8C9')
-                  } else {
-                    Text('播放')
-                      .fontSize(13)
-                      .fontColor('#050505')
-                      .fontWeight(FontWeight.Medium)
-                      .padding({ left: 14, right: 14, top: 6, bottom: 6 })
-                      .backgroundColor('#5DB8C9')
-                      .borderRadius(14)
-                      .onClick(() => {
-                        this.onPlayTrack(track);
-                      })
-                  }
+                  Text(this.resolvedTrackActionLabel(track))
+                    .fontSize(13)
+                    .fontColor(this.importButtonFontColor(track))
+                    .fontWeight(FontWeight.Medium)
+                    .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+                    .backgroundColor(this.importButtonBackground(track))
+                    .borderRadius(14)
+                    .opacity(this.resolvedTrackActionEnabled(track) ? 1 : 0.86)
+                    .onClick(() => {
+                      if (this.resolvedTrackActionEnabled(track)) {
+                        this.onImportTrack(track);
+                      }
+                    })
                 }
                 .width('100%')
                 .padding({ left: 24, right: 24, top: 12, bottom: 12 })

@@ -1,4 +1,7 @@
+import { image } from '@kit.ImageKit';
+
 import { MusicTrack } from '../../models/AppModels';
+import { formatDurationMs } from '../../utils/TrackUtils';
 
 @Component
 export struct MiniPlayerBar {
@@ -12,8 +15,10 @@ export struct MiniPlayerBar {
     filePath: '',
     rawFileName: '',
     accentColor: '#333333',
+    pic: '',
     isFavorite: false,
     isImported: false,
+    inPlayQueue: false,
     playCount: 0,
     lastPlayedAt: 0
   };
@@ -24,10 +29,31 @@ export struct MiniPlayerBar {
   @Prop playButtonScale: number = 1;
   @Prop nextButtonScale: number = 1;
   @Prop progressRatio: number = 0;
+  @Prop playbackProgressMs: number = 0;
+  @Prop playbackDurationMs: number = 0;
+  @Prop coveredTrackIds: string[] = [];
   onPlayPause: () => void = () => {};
   onNext: () => void = () => {};
+  onSeekChange: (value: number, mode: SliderChangeMode) => void = (_: number, __: SliderChangeMode) => {};
   onPlayButtonTouch: (event: TouchEvent) => void = (_: TouchEvent) => {};
   onNextButtonTouch: (event: TouchEvent) => void = (_: TouchEvent) => {};
+  coverForTrack: (trackId: string) => image.PixelMap | null = (_: string) => null;
+
+  private hasTrackCover(trackId: string): boolean {
+    return this.coveredTrackIds.indexOf(trackId) >= 0 && this.coverForTrack(trackId) !== null;
+  }
+
+  private trackCover(trackId: string): image.PixelMap {
+    return this.coverForTrack(trackId) as image.PixelMap;
+  }
+
+  private progressTimeText(): string {
+    return formatDurationMs(this.playbackProgressMs);
+  }
+
+  private durationTimeText(): string {
+    return formatDurationMs(this.playbackDurationMs);
+  }
 
   @Builder
   private discArtwork() {
@@ -45,15 +71,47 @@ export struct MiniPlayerBar {
           ]
         })
 
-      Row()
-        .width(40)
-        .height(40)
-        .borderRadius(20)
-        .border({
-          width: 1,
-          color: '#FFFFFF16'
-        })
-        .opacity(0.65)
+      if (this.hasTrackCover(this.track.id)) {
+        Image(this.trackCover(this.track.id))
+          .width(46)
+          .height(46)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(23)
+
+        Row()
+          .width(48)
+          .height(48)
+          .borderRadius(24)
+          .border({
+            width: 1,
+            color: '#FFFFFF24'
+          })
+      } else if (this.track.pic.length > 0) {
+        Image(this.track.pic)
+          .width(46)
+          .height(46)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(23)
+
+        Row()
+          .width(48)
+          .height(48)
+          .borderRadius(24)
+          .border({
+            width: 1,
+            color: '#FFFFFF24'
+          })
+      } else {
+        Row()
+          .width(40)
+          .height(40)
+          .borderRadius(20)
+          .border({
+            width: 1,
+            color: '#FFFFFF16'
+          })
+          .opacity(0.65)
+      }
 
       Row()
         .width(12)
@@ -151,7 +209,7 @@ export struct MiniPlayerBar {
   }
 
   build() {
-    Stack({ alignContent: Alignment.BottomStart }) {
+    Column({ space: 6 }) {
       Row({ space: 16 }) {
         this.discArtwork()
 
@@ -169,6 +227,19 @@ export struct MiniPlayerBar {
             .fontColor('#B7B7B7')
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Row() {
+            Text(this.progressTimeText())
+              .fontSize(12)
+              .fontColor('#8C8C8C')
+              .fontWeight(FontWeight.Medium)
+            Blank()
+            Text(this.durationTimeText())
+              .fontSize(12)
+              .fontColor('#6F6F6F')
+              .fontWeight(FontWeight.Medium)
+          }
+          .width('100%')
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -185,24 +256,28 @@ export struct MiniPlayerBar {
         })
       }
       .width('100%')
-      .padding({ left: 20, right: 18, top: 20, bottom: 26 })
+      .padding({ left: 20, right: 18, top: 18 })
 
-      Stack({ alignContent: Alignment.Start }) {
-        Row()
-          .width('100%')
-          .height(4)
-          .backgroundColor('#444341')
-          .borderRadius(2)
-
-        Row()
-          .width(`${this.progressRatio * 100}%`)
-          .height(4)
-          .backgroundColor('#F1F1F1')
-          .borderRadius(2)
-      }
-      .width('100%')
-      .height(4)
-      .padding({ left: 20, right: 20, bottom: 12 })
+      Slider({
+        value: this.playbackProgressMs,
+        min: 0,
+        max: Math.max(this.playbackDurationMs, 1),
+        style: SliderStyle.OutSet
+      })
+        .showTips(false)
+        .trackThickness(4)
+        .trackBorderRadius(2)
+        .selectedBorderRadius(2)
+        .blockSize({ width: 14, height: 14 })
+        .trackColor('#444341')
+        .selectedColor('#F1F1F1')
+        .blockColor('#FFFFFF')
+        .enabled(this.track.isImported && this.playbackDurationMs > 0)
+        .onChange((value: number, mode: SliderChangeMode) => {
+          this.onSeekChange(value, mode);
+        })
+        .width('100%')
+        .padding({ left: 14, right: 14, bottom: 12 })
     }
     .width('100%')
     .backgroundColor('#2A292880')
