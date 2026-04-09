@@ -3,19 +3,19 @@ import { filterSupportedExploreSources, sourceDisplayName } from '../../utils/Mu
 
 @Component
 export struct ExploreHallPage {
-  musicSources: MusicSourceConfig[] = [];
-  activeSourceId: string = '';
-  activeSearchSource: string = '';
-  sourceTracks: MusicSourceTrack[] = [];
-  sourceTracksLoading: boolean = false;
-  sourceSearchKeyword: string = '';
-  sourceCurrentPage: number = 1;
-  sourceTotal: number = 0;
-  sourceDownloadingId: string = '';
-  sourceBoardList: SourceBoardItem[] = [];
-  sourceBoardsLoading: boolean = false;
-  activeBoardId: string = '';
-  exploreMode: string = 'board';
+  @Prop musicSources: MusicSourceConfig[] = [];
+  @Prop activeSourceId: string = '';
+  @Prop activeSearchSource: string = '';
+  @Prop sourceTracks: MusicSourceTrack[] = [];
+  @Prop sourceTracksLoading: boolean = false;
+  @Prop sourceSearchKeyword: string = '';
+  @Prop sourceCurrentPage: number = 1;
+  @Prop sourceTotal: number = 0;
+  @Prop sourceDownloadingId: string = '';
+  @Prop sourceBoardList: SourceBoardItem[] = [];
+  @Prop sourceBoardsLoading: boolean = false;
+  @Prop activeBoardId: string = '';
+  @Prop exploreMode: string = 'board';
   onGoToProfile: () => void = () => {};
   onSelectSource: (source: MusicSourceConfig) => void = (_: MusicSourceConfig) => {};
   onSelectSubSource: (sourceCode: string) => void = (_: string) => {};
@@ -237,7 +237,7 @@ export struct ExploreHallPage {
             Text('当前音源暂无可浏览曲库')
               .fontSize(16)
               .fontColor('#888')
-            Text('Harmony 版音乐厅当前支持酷我、酷狗、咪咕')
+            Text('当前音源暂无可浏览的子源')
               .fontSize(13)
               .fontColor('#555')
           }

@@ -1,8 +1,8 @@
 @Component
 export struct SourceUpdateAlertDialog {
-  name: string = ''
-  log: string = ''
-  updateUrl: string = ''
+  @Prop name: string = ''
+  @Prop log: string = ''
+  @Prop updateUrl: string = ''
   onClose: () => void = () => {}
 
   build() {
@@ -10,7 +10,7 @@ export struct SourceUpdateAlertDialog {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#AA000000')
+        .backgroundColor('#CC000000')
         .onClick(() => {
           this.onClose();
         })
@@ -44,10 +44,10 @@ export struct SourceUpdateAlertDialog {
 
         Row() {
           Text('关闭')
-            .fontSize(13)
+            .fontSize(15)
             .fontColor('#111111')
-            .fontWeight(FontWeight.Medium)
-            .padding({ left: 18, right: 18, top: 8, bottom: 8 })
+            .fontWeight(FontWeight.Bold)
+            .padding({ left: 24, right: 24, top: 10, bottom: 10 })
             .backgroundColor('#5DB8C9')
             .borderRadius(14)
             .onClick(() => {
@@ -59,8 +59,9 @@ export struct SourceUpdateAlertDialog {
       }
       .width('82%')
       .padding({ left: 20, right: 20, top: 18, bottom: 18 })
-      .backgroundColor('#171717')
+      .backgroundColor('#222222')
       .borderRadius(20)
+      .border({ width: 1, color: '#333333' })
     }
     .width('100%')
     .height('100%')

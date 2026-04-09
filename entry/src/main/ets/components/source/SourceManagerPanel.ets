@@ -3,9 +3,9 @@ import { sourceDisplayName } from '../../utils/MusicSourceUtils';
 
 @Component
 export struct SourceManagerPanel {
-  musicSources: MusicSourceConfig[] = [];
-  addSourceLoading: boolean = false;
-  sourceUrlInput: string = '';
+  @Prop musicSources: MusicSourceConfig[] = [];
+  @Prop addSourceLoading: boolean = false;
+  @Prop sourceUrlInput: string = '';
   onClose: () => void = () => {};
   onSourceUrlChange: (value: string) => void = (_: string) => {};
   onAddFromFile: () => void = () => {};

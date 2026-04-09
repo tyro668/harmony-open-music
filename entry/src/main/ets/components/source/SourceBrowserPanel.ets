@@ -3,15 +3,15 @@ import { sourceDisplayName } from '../../utils/MusicSourceUtils';
 
 @Component
 export struct SourceBrowserPanel {
-  title: string = '音源浏览';
-  subSources: MusicSourceQuality[] = [];
-  activeSearchSource: string = '';
-  sourceSearchKeyword: string = '';
-  sourceTracks: MusicSourceTrack[] = [];
-  sourceTracksLoading: boolean = false;
-  sourceTotal: number = 0;
-  sourceCurrentPage: number = 1;
-  sourceDownloadingId: string = '';
+  @Prop title: string = '音源浏览';
+  @Prop subSources: MusicSourceQuality[] = [];
+  @Prop activeSearchSource: string = '';
+  @Prop sourceSearchKeyword: string = '';
+  @Prop sourceTracks: MusicSourceTrack[] = [];
+  @Prop sourceTracksLoading: boolean = false;
+  @Prop sourceTotal: number = 0;
+  @Prop sourceCurrentPage: number = 1;
+  @Prop sourceDownloadingId: string = '';
   onClose: () => void = () => {};
   onSelectSubSource: (sourceCode: string) => void = (_: string) => {};
   onSearchKeywordChange: (value: string) => void = (_: string) => {};

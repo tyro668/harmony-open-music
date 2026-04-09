@@ -2,8 +2,8 @@ import { MusicSourceConfig } from '../../models/AppModels';
 
 @Component
 export struct ProfilePageContent {
-  totalHours: number = 0;
-  musicSources: MusicSourceConfig[] = [];
+  @Prop totalHours: number = 0;
+  @Prop musicSources: MusicSourceConfig[] = [];
   onOpenFavorites: () => void = () => {};
   onOpenRecent: () => void = () => {};
   onImportLocal: () => void = () => {};

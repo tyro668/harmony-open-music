@@ -2,7 +2,7 @@ import { MusicTrack } from '../../models/AppModels';
 
 @Component
 export struct MiniPlayerBar {
-  track: MusicTrack = {
+  @Prop track: MusicTrack = {
     id: '',
     title: '',
     artist: '',
@@ -17,13 +17,13 @@ export struct MiniPlayerBar {
     playCount: 0,
     lastPlayedAt: 0
   };
-  discRotationAngle: number = 0;
-  isPlaying: boolean = false;
-  isPlayButtonTransitioning: boolean = false;
-  playButtonShowsPause: boolean = false;
-  playButtonScale: number = 1;
-  nextButtonScale: number = 1;
-  progressRatio: number = 0;
+  @Prop discRotationAngle: number = 0;
+  @Prop isPlaying: boolean = false;
+  @Prop isPlayButtonTransitioning: boolean = false;
+  @Prop playButtonShowsPause: boolean = false;
+  @Prop playButtonScale: number = 1;
+  @Prop nextButtonScale: number = 1;
+  @Prop progressRatio: number = 0;
   onPlayPause: () => void = () => {};
   onNext: () => void = () => {};
   onPlayButtonTouch: (event: TouchEvent) => void = (_: TouchEvent) => {};

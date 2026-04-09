@@ -208,14 +208,8 @@ export async function fetchBoardTrackPage(subSource: string, bangid: string, pag
     }
 
     if (subSource === 'tx') {
-      let requestBody = JSON.stringify({
-        toplist: {
-          module: 'musicToplist.ToplistInfoServer',
-          method: 'GetDetail',
-          param: { topid: parseInt(bangid), num: 100, period: '' }
-        },
-        comm: { uin: 0, format: 'json', ct: 20, cv: 1859 }
-      });
+      let topid = parseInt(bangid);
+      let requestBody = `{"toplist":{"module":"musicToplist.ToplistInfoServer","method":"GetDetail","param":{"topid":${topid},"num":100,"period":""}},"comm":{"uin":0,"format":"json","ct":20,"cv":1859}}`;
       let response = await httpRequest.request('https://u.y.qq.com/cgi-bin/musicu.fcg', {
         method: http.RequestMethod.POST,
         expectDataType: http.HttpDataType.STRING,
@@ -505,22 +499,8 @@ export async function searchSourceTrackPage(keyword: string, searchSource: strin
 
     if (searchSource === 'tx') {
       let limit = 30;
-      let requestBody = JSON.stringify({
-        comm: { ct: 11, cv: 1003, format: 'json', uin: 0 },
-        req: {
-          module: 'music.search.SearchCgiService',
-          method: 'DoSearchForQQMusicDesktop',
-          param: {
-            search_type: 0,
-            query: keyword,
-            page_num: page,
-            num_per_page: limit,
-            highlight: 0,
-            nqc_flag: 0,
-            grp: 1
-          }
-        }
-      });
+      let escapedKeyword = keyword.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      let requestBody = `{"comm":{"ct":11,"cv":1003,"format":"json","uin":0},"req":{"module":"music.search.SearchCgiService","method":"DoSearchForQQMusicDesktop","param":{"search_type":0,"query":"${escapedKeyword}","page_num":${page},"num_per_page":${limit},"highlight":0,"nqc_flag":0,"grp":1}}}`;
       let response = await httpRequest.request('https://u.y.qq.com/cgi-bin/musicu.fcg', {
         method: http.RequestMethod.POST,
         expectDataType: http.HttpDataType.STRING,

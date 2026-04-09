@@ -1,6 +1,17 @@
 import { describe, it, expect } from '@ohos/hypium';
 import fs from '@ohos.file.fs';
 
+interface BackgroundModesConfig {
+  backgroundModes: string[];
+}
+
+interface AvMetadata {
+  assetId: string;
+  title: string;
+  artist: string;
+  album: string;
+}
+
 /**
  * 后台播放与实况窗回归测试
  * 验证配置正确性和关键参数格式，防止回归。
@@ -12,8 +23,8 @@ export default function backgroundPlaybackTest() {
       // module.json5 abilities 中必须包含 audioPlayback 后台模式
       // 本用例通过读取源码文件来静态验证配置
       let moduleJson = '{"backgroundModes":["audioPlayback"]}';
-      let parsed: Record<string, string[]> = JSON.parse(moduleJson) as Record<string, string[]>;
-      expect(parsed['backgroundModes']).assertContain('audioPlayback');
+      let parsed = JSON.parse(moduleJson) as BackgroundModesConfig;
+      expect(parsed.backgroundModes).assertContain('audioPlayback');
     });
 
     it('module_json5_has_KEEP_BACKGROUND_RUNNING_permission', 0, () => {
@@ -65,16 +76,16 @@ export default function backgroundPlaybackTest() {
     });
 
     it('avSession_metadata_fields_are_populated', 0, () => {
-      let metadata: Record<string, string> = {
+      let metadata: AvMetadata = {
         assetId: 'track_001',
         title: 'Test Song',
         artist: 'Test Artist',
         album: 'Test Album'
       };
-      expect(metadata['assetId']!.length).assertLarger(0);
-      expect(metadata['title']!.length).assertLarger(0);
-      expect(metadata['artist']!.length).assertLarger(0);
-      expect(metadata['album']!.length).assertLarger(0);
+      expect(metadata.assetId.length).assertLarger(0);
+      expect(metadata.title.length).assertLarger(0);
+      expect(metadata.artist.length).assertLarger(0);
+      expect(metadata.album.length).assertLarger(0);
     });
   });
 

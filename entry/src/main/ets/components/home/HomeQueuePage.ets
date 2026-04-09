@@ -2,11 +2,11 @@ import { MusicTrack, PlayMode } from '../../models/AppModels';
 
 @Component
 export struct HomeQueuePage {
-  tracks: MusicTrack[] = [];
-  currentTrackId: string = '';
-  playMode: PlayMode = PlayMode.Sequential;
-  showRenameDialog: boolean = false;
-  renameText: string = '';
+  @Prop tracks: MusicTrack[] = [];
+  @Prop currentTrackId: string = '';
+  @Prop playMode: PlayMode = PlayMode.Sequential;
+  @Prop showRenameDialog: boolean = false;
+  @Prop renameText: string = '';
   onSelectPlayMode: (mode: PlayMode) => void = (_: PlayMode) => {};
   onTrackTap: (track: MusicTrack) => void = (_: MusicTrack) => {};
   onToggleFavorite: (trackId: string) => void = (_: string) => {};
