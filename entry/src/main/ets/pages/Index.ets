@@ -17,7 +17,9 @@ import {
   BUILTIN_BOARD_LIST,
   COLOR_PALETTE,
   DEFAULT_PLAYBACK_COLLECTION_ID,
+  LIVE_VIEW_ICON_FILE_NAME,
   LIVE_VIEW_ICON_FRAME_COUNT,
+  LIVE_VIEW_ICON_FRAME_PREFIX,
   LISTENING_SEED_MS,
   MAX_RECENT_TRACKS,
   MINI_PLACEHOLDER_TRACK,
@@ -51,10 +53,12 @@ import { ProfilePageContent } from '../components/profile/ProfilePageContent';
 import { ThemeModePanel } from '../components/profile/ThemeModePanel';
 import { BottomNavigationBar } from '../components/shell/BottomNavigationBar';
 import { MiniPlayerBar } from '../components/shell/MiniPlayerBar';
+import { LyricsPanel } from '../components/shell/LyricsPanel';
 import { SourceBrowserPanel } from '../components/source/SourceBrowserPanel';
 import { SourceManagerPanel } from '../components/source/SourceManagerPanel';
 import { SourceUpdateAlertDialog } from '../components/source/SourceUpdateAlertDialog';
 import { QuickJsEngineAdapter, QuickJsHostEvent } from '../utils/QuickJsEngine';
+import { LyricLine, parseLrcLyrics, findCurrentLyricIndex } from '../utils/LyricsParser';
 import { LX_PRELOAD_SCRIPT as USER_API_PRELOAD_SCRIPT } from '../utils/LxUserApiPreload';
 import {
   currentTrack as selectCurrentTrack,
@@ -132,10 +136,12 @@ import {
 } from '../services/CustomPlaylistService';
 import { fetchBoardTrackPage, searchSourceTrackPage } from '../services/MusicSourceApiService';
 import {
+  buildQuickJsLyricRequest,
   buildQuickJsMusicUrlRequest,
   buildQuickJsSourceSetupScript,
   createQuickJsHttpRequestTask,
   handleJsEngineInitPayload,
+  parseQuickJsLyricResponse,
   parseQuickJsMusicUrlResponse,
   resolveSourceTrackQuality
 } from '../services/QuickJsSourceService';
@@ -155,6 +161,7 @@ import {
 import {
   extractTrackDuration,
   extractTrackArtwork,
+  extractTrackLyrics,
   releaseTrackArtwork as releaseExtractedTrackArtwork
 } from '../services/TrackArtworkService';
 
@@ -239,6 +246,11 @@ struct Index {
   @State sourceUpdateAlertLog: string = '';
   @State sourceUpdateAlertUrl: string = '';
   @State trackArtworkIds: string[] = [];
+  @State showLyricsPanel: boolean = false;
+  @State currentLyrics: LyricLine[] = [];
+  @State currentLyricIndex: number = -1;
+  @State isLoadingLyrics: boolean = false;
+  private lyricsTrackId: string = '';
 
   private jsEngineKey: string = '';
   private jsEngineSourceId: string = '';
@@ -280,6 +292,8 @@ struct Index {
   private pendingPersistState: boolean = false;
   private liveView: liveViewManager.LiveView | null = null;
   private liveViewSequence: number = 0;
+  private liveViewCoverTrackId: string = '';
+  private coverArtFilePath: string = '';
   private session: avSession.AVSession | null = null;
   private isBackgroundTaskRunning: boolean = false;
   private sourceImportQueue: SourceImportTask[] = [];
@@ -309,6 +323,23 @@ struct Index {
       .height('100%')
       .padding({ bottom: 168 })
 
+      if (this.showLyricsPanel) {
+        Column() {
+          LyricsPanel({
+            lyrics: this.currentLyrics,
+            currentIndex: this.currentLyricIndex,
+            isLoading: this.isLoadingLyrics,
+            onClose: () => {
+              this.showLyricsPanel = false;
+            }
+          })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .padding({ bottom: 168 })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
+      }
+
       Column({ space: 8 }) {
         MiniPlayerBar({
           track: selectCurrentTrack(this.localTracks, this.currentTrackId),
@@ -336,6 +367,9 @@ struct Index {
           },
           onNextButtonTouch: (event: TouchEvent) => {
             this.handleNextButtonTouch(event);
+          },
+          onTapTrackInfo: () => {
+            this.showLyricsPanel = !this.showLyricsPanel;
           },
           coverForTrack: (trackId: string) => this.trackArtworkForTrack(trackId)
         })
@@ -1164,13 +1198,15 @@ struct Index {
       }
       this.liveViewSequence = 1;
       this.liveViewIconFrameIndex = 0;
+      await this.saveLiveViewCoverIcon(track.id);
+      let iconFile = this.coverArtFilePath.length > 0 ? this.coverArtFilePath : LIVE_VIEW_ICON_FILE_NAME;
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
       this.liveView = createPlaybackLiveView(
         track,
         clickAction,
         this.liveViewSequence,
-        this.currentLiveViewIconFileName(false)
+        iconFile
       );
       await liveViewManager.startLiveView(this.liveView);
       console.info('startMusicLiveView succeeded');
@@ -1186,6 +1222,10 @@ struct Index {
     try {
       this.liveViewSequence += 1;
       let track = this.currentTrack();
+      if (track.id !== this.liveViewCoverTrackId) {
+        await this.saveLiveViewCoverIcon(track.id);
+      }
+      let iconFile = this.coverArtFilePath.length > 0 ? this.coverArtFilePath : this.currentLiveViewIconFileName(playing);
       let progress = this.playbackDurationMs > 0 ? Math.round(this.playbackProgressMs / this.playbackDurationMs * 100) : 0;
       this.liveView = applyPlaybackLiveViewUpdate(
         this.liveView,
@@ -1193,7 +1233,7 @@ struct Index {
         this.liveViewSequence,
         progress,
         playing,
-        this.currentLiveViewIconFileName(playing)
+        iconFile
       );
       await liveViewManager.updateLiveView(this.liveView);
     } catch (error) {
@@ -1228,7 +1268,8 @@ struct Index {
       let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
       let session = await avSession.createAVSession(context, 'MusicPlayer', 'audio');
       this.session = session;
-      await session.setAVMetadata(createSessionMetadata(track));
+      let coverUri = this.coverArtFilePath.length > 0 ? fileUri.getUriFromPath(this.coverArtFilePath) : '';
+      await session.setAVMetadata(createSessionMetadata(track, coverUri));
       await session.setLaunchAbility(clickAction);
       await this.refreshAVSessionQueue();
 
@@ -1266,6 +1307,18 @@ struct Index {
       );
     } catch (error) {
       console.error(`updateAVSessionState failed: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private async updateAVSessionCoverArt(track: MusicTrack): Promise<void> {
+    if (!this.session) {
+      return;
+    }
+    try {
+      let coverUri = this.coverArtFilePath.length > 0 ? fileUri.getUriFromPath(this.coverArtFilePath) : '';
+      await this.session.setAVMetadata(createSessionMetadata(track, coverUri));
+    } catch (error) {
+      console.error(`updateAVSessionCoverArt failed: ${JSON.stringify(error)}`);
     }
   }
 
@@ -1331,6 +1384,32 @@ struct Index {
 
   private currentLiveViewIconFileName(playing: boolean): string {
     return resolveLiveViewIconFileName(playing, this.liveViewIconFrameIndex);
+  }
+
+  private async saveLiveViewCoverIcon(trackId: string): Promise<void> {
+    let pixelMap = this.trackArtworkForTrack(trackId);
+    if (pixelMap === null) {
+      this.liveViewCoverTrackId = '';
+      this.coverArtFilePath = '';
+      return;
+    }
+    try {
+      let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      let packer = image.createImagePacker();
+      let packOpts: image.PackingOption = { format: 'image/png', quality: 80 };
+      let arrayBuffer = await packer.packing(pixelMap, packOpts);
+      await packer.release();
+      let coverPath = `${context.filesDir}/cover_icon.png`;
+      let coverFile = fs.openSync(coverPath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+      fs.writeSync(coverFile.fd, arrayBuffer);
+      fs.closeSync(coverFile);
+      this.coverArtFilePath = coverPath;
+      this.liveViewCoverTrackId = trackId;
+    } catch (error) {
+      console.error(`saveLiveViewCoverIcon failed: ${JSON.stringify(error)}`);
+      this.liveViewCoverTrackId = '';
+      this.coverArtFilePath = '';
+    }
   }
 
   private startLiveViewIconRotation(): void {
@@ -1806,6 +1885,12 @@ struct Index {
       this.refreshAlbumArtworkAliases();
       this.refreshTrackArtworkIds();
       await releaseExtractedTrackArtwork(previous);
+      // Update AVSession and LiveView if this is the current track
+      if (track.id === this.currentTrackId) {
+        await this.saveLiveViewCoverIcon(track.id);
+        void this.updateAVSessionCoverArt(track);
+        void this.updateMusicLiveView(this.isPlaying);
+      }
     } finally {
       this.trackArtworkLoadingIds.delete(track.id);
     }
@@ -1826,6 +1911,33 @@ struct Index {
     this.refreshAlbumArtworkAliases();
     this.refreshTrackArtworkIds();
     await releaseExtractedTrackArtwork(pixelMap);
+  }
+
+  private async loadTrackLyrics(track: MusicTrack): Promise<void> {
+    if (this.lyricsTrackId === track.id) {
+      return;
+    }
+    this.lyricsTrackId = track.id;
+    this.currentLyrics = [];
+    this.currentLyricIndex = -1;
+    this.isLoadingLyrics = true;
+    try {
+      let rawLrc = await extractTrackLyrics(track);
+      if (this.lyricsTrackId !== track.id) {
+        return;
+      }
+      if (rawLrc.length > 0) {
+        this.currentLyrics = parseLrcLyrics(rawLrc);
+      } else {
+        this.currentLyrics = [];
+      }
+    } catch (_) {
+      this.currentLyrics = [];
+    } finally {
+      if (this.lyricsTrackId === track.id) {
+        this.isLoadingLyrics = false;
+      }
+    }
   }
 
   private async persistUriPermissions(uris: Array<string>): Promise<void> {
@@ -2231,6 +2343,32 @@ struct Index {
       buildQuickJsMusicUrlRequest(requestKey, track, quality)
     );
     return parseQuickJsMusicUrlResponse(responsePayloadJson);
+  }
+
+  private async requestLyricFromEngine(source: MusicSourceConfig, track: MusicSourceTrack): Promise<string> {
+    let loaded = await this.loadSourceIntoJsEngine(source);
+    if (!loaded) {
+      return '';
+    }
+    try {
+      let requestKey = `lyric_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+      let responsePayloadJson = await this.getQuickJsEngine().dispatch(
+        this.jsEngineKey,
+        'request',
+        buildQuickJsLyricRequest(requestKey, track)
+      );
+      let result = parseQuickJsLyricResponse(responsePayloadJson);
+      if (result === null || result.lyric.length === 0) {
+        return '';
+      }
+      // Merge translated lyrics as comments if available
+      if (result.tlyric.length > 0) {
+        return result.lyric + '\n' + result.tlyric;
+      }
+      return result.lyric;
+    } catch (_) {
+      return '';
+    }
   }
 
   private processAndAddSource(scriptContent: string): MusicSourceConfig | null {
@@ -2694,6 +2832,22 @@ struct Index {
 
       let trackPic = await this.fetchSourceTrackPic(track);
 
+      // Fetch and save lyrics
+      try {
+        let lrcContent = await this.requestLyricFromEngine(source, track);
+        if (lrcContent.length > 0) {
+          let lrcPath = targetPath.replace(/\.[^.]+$/, '.lrc');
+          let lrcFile = fs.openSync(lrcPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
+          try {
+            fs.writeSync(lrcFile.fd, lrcContent);
+          } finally {
+            fs.closeSync(lrcFile);
+          }
+        }
+      } catch (_) {
+        // lyrics fetch failure should not block import
+      }
+
       let importedTrack: MusicTrack = {
         id: `source-${Date.now()}`,
         title: track.name,
@@ -3069,6 +3223,7 @@ struct Index {
     this.lastProgressSnapshotMs = 0;
     this.setMiniPlayButtonState(true, true);
     this.schedulePersistState();
+    void this.loadTrackLyrics(track);
 
     await this.releasePlayer();
     if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
@@ -3350,6 +3505,13 @@ struct Index {
       }
       this.lastProgressSnapshotMs = time;
       this.playbackProgressMs = time;
+      // Update current lyric line
+      if (this.currentLyrics.length > 0) {
+        let lyricIdx = findCurrentLyricIndex(this.currentLyrics, time);
+        if (lyricIdx !== this.currentLyricIndex) {
+          this.currentLyricIndex = lyricIdx;
+        }
+      }
       // 每5秒更新一次LiveView进度
       if (time % 5000 < 100) {
         void this.updateMusicLiveView(this.isPlaying);

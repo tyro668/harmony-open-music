@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
-  <path d="M10 15H28" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-  <path d="M10 24H28" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-  <path d="M10 33H28" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-  <path d="M35 18V32" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-  <path d="M31 32C31 34.2091 32.7909 36 35 36C37.2091 36 39 34.2091 39 32C39 29.7909 37.2091 28 35 28C32.7909 28 31 29.7909 31 32Z" stroke="#FFFFFF" stroke-width="4"/>
-  <path d="M35 18L39 16" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="white">
+  <rect x="8" y="13" width="20" height="4" rx="2"/>
+  <rect x="8" y="22" width="20" height="4" rx="2"/>
+  <rect x="8" y="31" width="20" height="4" rx="2"/>
+  <rect x="33" y="16" width="4" height="16"/>
+  <circle cx="35" cy="32" r="4"/>
+  <polygon points="37,15 41,13 41,17"/>
 </svg>

@@ -40,11 +40,11 @@ globalThis.lx_setup = function(engineKey, scriptInfo) {
     local: []
   };
   var supportActions = {
-    kw: ['musicUrl'],
-    kg: ['musicUrl'],
-    tx: ['musicUrl'],
-    wy: ['musicUrl'],
-    mg: ['musicUrl'],
+    kw: ['musicUrl', 'lyric'],
+    kg: ['musicUrl', 'lyric'],
+    tx: ['musicUrl', 'lyric'],
+    wy: ['musicUrl', 'lyric'],
+    mg: ['musicUrl', 'lyric'],
     local: ['musicUrl', 'lyric', 'pic']
   };
 

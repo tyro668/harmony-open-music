@@ -374,6 +374,62 @@ export function parseQuickJsMusicUrlResponse(responsePayloadJson: string): strin
   return url;
 }
 
+export interface SourceLyricResult {
+  lyric: string;
+  tlyric: string;
+}
+
+export function buildQuickJsLyricRequest(requestKey: string, track: MusicSourceTrack): string {
+  let musicInfo: Record<string, Object> = {
+    'name': track.name as Object,
+    'singer': track.singer as Object,
+    'source': track.source as Object,
+    'songmid': track.songmid as Object,
+    'interval': track.interval as Object,
+    'albumName': track.album as Object,
+    'albumId': track.albumId as Object,
+    'img': track.pic as Object,
+    'hash': track.hash as Object,
+    'copyrightId': track.copyrightId as Object
+  };
+
+  let infoObj: Record<string, Object> = {
+    'musicInfo': musicInfo as Object
+  };
+  let dataObj: Record<string, Object> = {
+    'source': track.source as Object,
+    'action': 'lyric' as Object,
+    'info': infoObj as Object
+  };
+  let requestData: Record<string, Object> = {
+    'requestKey': requestKey as Object,
+    'data': dataObj as Object
+  };
+  return JSON.stringify(requestData);
+}
+
+export function parseQuickJsLyricResponse(responsePayloadJson: string): SourceLyricResult | null {
+  let responseData = JSON.parse(responsePayloadJson) as Record<string, Object>;
+  let status = responseData['status'] as boolean;
+  if (!status) {
+    return null;
+  }
+  let result = responseData['result'] as Record<string, Object>;
+  if (!result) {
+    return null;
+  }
+  let resultData = result['data'] as Record<string, Object>;
+  if (!resultData) {
+    return null;
+  }
+  let lyric = typeof resultData['lyric'] === 'string' ? resultData['lyric'] as string : '';
+  let tlyric = typeof resultData['tlyric'] === 'string' ? resultData['tlyric'] as string : '';
+  if (lyric.length === 0) {
+    return null;
+  }
+  return { lyric, tlyric };
+}
+
 export function resolveSourceTrackQuality(source: MusicSourceConfig, track: MusicSourceTrack): string {
   let sourceQuality = source.musicSources.find((item: MusicSourceQuality) => item.source === track.source);
   if (!sourceQuality || sourceQuality.qualitys.length === 0) {

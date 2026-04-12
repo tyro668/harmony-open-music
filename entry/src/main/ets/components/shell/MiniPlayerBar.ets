@@ -40,6 +40,7 @@ export struct MiniPlayerBar {
   onSeekChange: (value: number, mode: SliderChangeMode) => void = (_: number, __: SliderChangeMode) => {};
   onPlayButtonTouch: (event: TouchEvent) => void = (_: TouchEvent) => {};
   onNextButtonTouch: (event: TouchEvent) => void = (_: TouchEvent) => {};
+  onTapTrackInfo: () => void = () => {};
   coverForTrack: (trackId: string) => image.PixelMap | null = (_: string) => null;
 
   private hasTrackCover(trackId: string): boolean {
@@ -405,6 +406,9 @@ export struct MiniPlayerBar {
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
+        .onClick(() => {
+          this.onTapTrackInfo();
+        })
 
         this.controlCircle(() => {
           this.onPlayPause();

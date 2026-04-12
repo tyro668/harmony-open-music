@@ -122,13 +122,17 @@ export function resolveLiveViewIconFileName(playing: boolean, frameIndex: number
   return `${LIVE_VIEW_ICON_FRAME_PREFIX}${normalizedIndex}.png`;
 }
 
-export function createSessionMetadata(track: MusicTrack): avSession.AVMetadata {
-  return {
+export function createSessionMetadata(track: MusicTrack, coverImageUri?: string): avSession.AVMetadata {
+  let metadata: avSession.AVMetadata = {
     assetId: track.id,
     title: track.title,
     artist: track.artist,
     album: track.album
   };
+  if (coverImageUri && coverImageUri.length > 0) {
+    metadata.mediaImage = coverImageUri;
+  }
+  return metadata;
 }
 
 export function createPlaybackState(

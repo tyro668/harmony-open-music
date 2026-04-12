@@ -98,3 +98,23 @@ export async function releaseTrackArtwork(pixelMap: image.PixelMap | null | unde
     // ignore pixel map cleanup failures
   }
 }
+
+export async function extractTrackLyrics(track: MusicTrack): Promise<string> {
+  // Try external .lrc file next to the audio file
+  let playablePath = resolveTrackArtworkPath(track);
+  if (playablePath.length > 0) {
+    let lrcPath = playablePath.replace(/\.[^.]+$/, '.lrc');
+    try {
+      let exists = fs.accessSync(lrcPath);
+      if (exists) {
+        let content = fs.readTextSync(lrcPath);
+        if (content.length > 0) {
+          return content;
+        }
+      }
+    } catch (_) {
+      // .lrc file not found or unreadable
+    }
+  }
+  return '';
+}
