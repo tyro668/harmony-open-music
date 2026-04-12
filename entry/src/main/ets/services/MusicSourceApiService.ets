@@ -200,7 +200,11 @@ export async function fetchBoardTrackPage(subSource: string, bangid: string, pag
             hash: '',
             types: quality[0],
             _types: quality[1],
-            copyrightId: objectInfo['copyrightId'] as string || ''
+            copyrightId: objectInfo['copyrightId'] as string || '',
+            songId: songId,
+            lrcUrl: objectInfo['lyricUrl'] as string || objectInfo['lrcUrl'] as string || '',
+            mrcUrl: objectInfo['mrcurl'] as string || objectInfo['mrcUrl'] as string || '',
+            trcUrl: objectInfo['trcUrl'] as string || ''
           });
         }
       }
@@ -258,7 +262,10 @@ export async function fetchBoardTrackPage(subSource: string, bangid: string, pag
             hash: mediaMid,
             types: quality[0],
             _types: quality[1],
-            copyrightId: ''
+            copyrightId: '',
+            songId: `${item['id'] as number || 0}`,
+            albumMid: albumMid,
+            strMediaMid: mediaMid
           });
         }
       }
@@ -489,11 +496,15 @@ export async function searchSourceTrackPage(keyword: string, searchSource: strin
               interval: '',
               pic: mgImg,
               source: 'mg',
-              songmid: copyrightId,
+              songmid: item['songId'] as string || copyrightId,
               hash: '',
               types: [],
               _types: {},
-              copyrightId: copyrightId
+              copyrightId: copyrightId,
+              songId: item['songId'] as string || copyrightId,
+              lrcUrl: item['lrcUrl'] as string || item['lyricUrl'] as string || '',
+              mrcUrl: item['mrcurl'] as string || item['mrcUrl'] as string || '',
+              trcUrl: item['trcUrl'] as string || ''
             });
           }
         }
@@ -560,7 +571,10 @@ export async function searchSourceTrackPage(keyword: string, searchSource: strin
             hash: mediaMid,
             types: quality[0],
             _types: quality[1],
-            copyrightId: ''
+            copyrightId: '',
+            songId: `${item['id'] as number || 0}`,
+            albumMid: albumMid,
+            strMediaMid: mediaMid
           });
         }
       }

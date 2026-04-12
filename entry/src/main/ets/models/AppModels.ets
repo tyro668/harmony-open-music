@@ -80,6 +80,12 @@ export interface MusicSourceTrack {
   types: MusicQualityType[];
   _types: Record<string, MusicQualityType>;
   copyrightId: string;
+  songId?: string;
+  albumMid?: string;
+  strMediaMid?: string;
+  lrcUrl?: string;
+  mrcUrl?: string;
+  trcUrl?: string;
 }
 
 export interface MusicQualityType {

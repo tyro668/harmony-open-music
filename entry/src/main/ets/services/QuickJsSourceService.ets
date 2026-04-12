@@ -12,6 +12,7 @@ import {
   normalizeMusicSourceQuality,
   resolvePreferredSourceQuality
 } from '../utils/MusicSourceUtils';
+import { lineLyricFromLxLyric } from '../utils/LyricsParser';
 
 export interface JsEngineInitOutcome {
   ready: boolean;
@@ -301,44 +302,7 @@ export function createQuickJsHttpRequestTask(req: QuickJsHttpRequest): QuickJsHt
 }
 
 export function buildQuickJsMusicUrlRequest(requestKey: string, track: MusicSourceTrack, quality: string): string {
-  let typesArr: Record<string, Object>[] = [];
-  for (let index = 0; index < track.types.length; index++) {
-    let qt = track.types[index];
-    let typeObj: Record<string, Object> = { 'type': qt.type as Object, 'size': qt.size as Object };
-    if (qt.hash.length > 0) {
-      typeObj['hash'] = qt.hash as Object;
-    }
-    typesArr.push(typeObj);
-  }
-
-  let typesMap: Record<string, Object> = {};
-  let typeKeys = Object.keys(track._types);
-  for (let index = 0; index < typeKeys.length; index++) {
-    let typeKey = typeKeys[index];
-    let typeValue = track._types[typeKey];
-    let entry: Record<string, Object> = { 'size': typeValue.size as Object };
-    if (typeValue.hash.length > 0) {
-      entry['hash'] = typeValue.hash as Object;
-    }
-    typesMap[typeKey] = entry as Object;
-  }
-
-  let emptyTypeUrl: Record<string, Object> = {};
-  let musicInfo: Record<string, Object> = {
-    'name': track.name as Object,
-    'singer': track.singer as Object,
-    'source': track.source as Object,
-    'songmid': track.songmid as Object,
-    'interval': track.interval as Object,
-    'albumName': track.album as Object,
-    'albumId': track.albumId as Object,
-    'img': track.pic as Object,
-    'hash': track.hash as Object,
-    'types': typesArr as Object,
-    '_types': typesMap as Object,
-    'typeUrl': emptyTypeUrl as Object,
-    'copyrightId': track.copyrightId as Object
-  };
+  let musicInfo = buildQuickJsMusicInfo(track, true);
 
   let infoObj: Record<string, Object> = {
     'type': quality as Object,
@@ -377,9 +341,11 @@ export function parseQuickJsMusicUrlResponse(responsePayloadJson: string): strin
 export interface SourceLyricResult {
   lyric: string;
   tlyric: string;
+  rlyric: string;
+  lxlyric: string;
 }
 
-export function buildQuickJsLyricRequest(requestKey: string, track: MusicSourceTrack): string {
+function buildQuickJsMusicInfo(track: MusicSourceTrack, includeTypeInfo: boolean): Record<string, Object> {
   let musicInfo: Record<string, Object> = {
     'name': track.name as Object,
     'singer': track.singer as Object,
@@ -392,6 +358,60 @@ export function buildQuickJsLyricRequest(requestKey: string, track: MusicSourceT
     'hash': track.hash as Object,
     'copyrightId': track.copyrightId as Object
   };
+
+  if (track.source === 'tx') {
+    musicInfo['songId'] = (track.songId ?? track.id) as Object;
+    musicInfo['albumMid'] = (track.albumMid ?? track.albumId) as Object;
+    musicInfo['strMediaMid'] = (track.strMediaMid ?? track.hash) as Object;
+  }
+
+  if (track.source === 'mg') {
+    if ((track.lrcUrl ?? '').length > 0) {
+      musicInfo['lrcUrl'] = track.lrcUrl as Object;
+    }
+    if ((track.mrcUrl ?? '').length > 0) {
+      musicInfo['mrcUrl'] = track.mrcUrl as Object;
+    }
+    if ((track.trcUrl ?? '').length > 0) {
+      musicInfo['trcUrl'] = track.trcUrl as Object;
+    }
+  }
+
+  if (!includeTypeInfo) {
+    return musicInfo;
+  }
+
+  let typesArr: Record<string, Object>[] = [];
+  for (let index = 0; index < track.types.length; index++) {
+    let qt = track.types[index];
+    let typeObj: Record<string, Object> = { 'type': qt.type as Object, 'size': qt.size as Object };
+    if (qt.hash.length > 0) {
+      typeObj['hash'] = qt.hash as Object;
+    }
+    typesArr.push(typeObj);
+  }
+
+  let typesMap: Record<string, Object> = {};
+  let typeKeys = Object.keys(track._types);
+  for (let index = 0; index < typeKeys.length; index++) {
+    let typeKey = typeKeys[index];
+    let typeValue = track._types[typeKey];
+    let entry: Record<string, Object> = { 'size': typeValue.size as Object };
+    if (typeValue.hash.length > 0) {
+      entry['hash'] = typeValue.hash as Object;
+    }
+    typesMap[typeKey] = entry as Object;
+  }
+
+  musicInfo['types'] = typesArr as Object;
+  musicInfo['_types'] = typesMap as Object;
+  let typeUrl: Record<string, Object> = {};
+  musicInfo['typeUrl'] = typeUrl as Object;
+  return musicInfo;
+}
+
+export function buildQuickJsLyricRequest(requestKey: string, track: MusicSourceTrack): string {
+  let musicInfo = buildQuickJsMusicInfo(track, false);
 
   let infoObj: Record<string, Object> = {
     'musicInfo': musicInfo as Object
@@ -424,10 +444,15 @@ export function parseQuickJsLyricResponse(responsePayloadJson: string): SourceLy
   }
   let lyric = typeof resultData['lyric'] === 'string' ? resultData['lyric'] as string : '';
   let tlyric = typeof resultData['tlyric'] === 'string' ? resultData['tlyric'] as string : '';
+  let rlyric = typeof resultData['rlyric'] === 'string' ? resultData['rlyric'] as string : '';
+  let lxlyric = typeof resultData['lxlyric'] === 'string' ? resultData['lxlyric'] as string : '';
+  if (lyric.length === 0 && lxlyric.length > 0) {
+    lyric = lineLyricFromLxLyric(lxlyric);
+  }
   if (lyric.length === 0) {
     return null;
   }
-  return { lyric, tlyric };
+  return { lyric, tlyric, rlyric, lxlyric };
 }
 
 export function resolveSourceTrackQuality(source: MusicSourceConfig, track: MusicSourceTrack): string {

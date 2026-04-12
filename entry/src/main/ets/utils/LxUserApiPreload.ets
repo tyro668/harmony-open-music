@@ -1057,6 +1057,28 @@ globalThis.lx_setup = function(engineKey, scriptInfo) {
     resolve();
   };
 
+  // Expose zlib inflate via native bridge for source scripts (pako compatibility shim)
+  var nativeInflate = function(inputData) {
+    if (typeof __quickjs_inflate__ !== 'function') {
+      throw new Error('inflate is not available');
+    }
+    var inputArray;
+    if (Array.isArray(inputData)) {
+      inputArray = inputData;
+    } else if (inputData instanceof Uint8Array || ArrayBuffer.isView(inputData)) {
+      inputArray = Array.from(inputData);
+    } else {
+      throw new Error('inflate expects array or Uint8Array input');
+    }
+    var result = __quickjs_inflate__(inputArray);
+    return decorateBuffer(new Uint8Array(result));
+  };
+
+  globalThis.pako = {
+    inflate: nativeInflate,
+    inflateRaw: nativeInflate
+  };
+
   var jsCall = function(action, data) {
     switch (action) {
       case '__run_error__':

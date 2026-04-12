@@ -8,6 +8,8 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include <zlib.h>
 
 extern "C" {
 #include "quickjs/quickjs.h"
@@ -256,6 +258,80 @@ private:
         return JS_UNDEFINED;
     }
 
+    static JSValue BridgeInflate(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+    {
+        (void)this_val;
+        if (argc < 1 || !JS_IsObject(argv[0])) {
+            return JS_ThrowTypeError(ctx, "__quickjs_inflate__ expects an array of byte values");
+        }
+
+        // Read input array length
+        JSValue lengthVal = JS_GetPropertyStr(ctx, argv[0], "length");
+        int64_t inputLen = 0;
+        if (JS_ToInt64(ctx, &inputLen, lengthVal) < 0 || inputLen <= 0) {
+            JS_FreeValue(ctx, lengthVal);
+            return JS_ThrowTypeError(ctx, "invalid inflate input length");
+        }
+        JS_FreeValue(ctx, lengthVal);
+        if (inputLen > 16 * 1024 * 1024) {
+            return JS_ThrowRangeError(ctx, "inflate input too large");
+        }
+
+        // Read input bytes from JS array
+        std::vector<uint8_t> inputBuf(static_cast<size_t>(inputLen));
+        for (int64_t i = 0; i < inputLen; i++) {
+            JSValue elem = JS_GetPropertyUint32(ctx, argv[0], static_cast<uint32_t>(i));
+            int32_t byteVal = 0;
+            JS_ToInt32(ctx, &byteVal, elem);
+            JS_FreeValue(ctx, elem);
+            inputBuf[static_cast<size_t>(i)] = static_cast<uint8_t>(byteVal & 0xFF);
+        }
+
+        // Try raw inflate, then zlib header, then gzip
+        int wbits_options[] = {-MAX_WBITS, MAX_WBITS, MAX_WBITS + 16};
+        for (int wi = 0; wi < 3; wi++) {
+            z_stream strm = {};
+            strm.next_in = inputBuf.data();
+            strm.avail_in = static_cast<uInt>(inputBuf.size());
+
+            int ret = inflateInit2(&strm, wbits_options[wi]);
+            if (ret != Z_OK) {
+                continue;
+            }
+
+            std::vector<uint8_t> output;
+            uint8_t chunk[16384];
+            bool failed = false;
+            do {
+                strm.next_out = chunk;
+                strm.avail_out = sizeof(chunk);
+                ret = inflate(&strm, Z_NO_FLUSH);
+                if (ret == Z_STREAM_ERROR || ret == Z_NEED_DICT || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR) {
+                    failed = true;
+                    break;
+                }
+                size_t have = sizeof(chunk) - strm.avail_out;
+                output.insert(output.end(), chunk, chunk + have);
+                if (output.size() > 16u * 1024 * 1024) {
+                    failed = true;
+                    break;
+                }
+            } while (ret != Z_STREAM_END);
+            inflateEnd(&strm);
+
+            if (!failed && ret == Z_STREAM_END) {
+                // Build JS array from output bytes
+                JSValue result = JS_NewArray(ctx);
+                for (size_t i = 0; i < output.size(); i++) {
+                    JS_SetPropertyUint32(ctx, result, static_cast<uint32_t>(i), JS_NewInt32(ctx, output[i]));
+                }
+                return result;
+            }
+        }
+
+        return JS_ThrowInternalError(ctx, "inflate decompression failed");
+    }
+
     static int InterruptHandler(JSRuntime *rt, void *opaque)
     {
         (void)rt;
@@ -302,6 +378,13 @@ private:
         if (JS_SetPropertyStr(context_, global, "__quickjs_set_timeout__", timer) < 0) {
             JS_FreeValue(context_, global);
             error_message = "failed to expose __quickjs_set_timeout__";
+            Destroy();
+            return false;
+        }
+        JSValue inflateFunc = JS_NewCFunction(context_, BridgeInflate, "__quickjs_inflate__", 1);
+        if (JS_SetPropertyStr(context_, global, "__quickjs_inflate__", inflateFunc) < 0) {
+            JS_FreeValue(context_, global);
+            error_message = "failed to expose __quickjs_inflate__";
             Destroy();
             return false;
         }
@@ -564,6 +647,78 @@ static napi_value Dispatch(napi_env env, napi_callback_info info)
     }
     return CreateUtf8(env, envelope_json);
 }
+
+static napi_value RawInflate(napi_env env, napi_callback_info info)
+{
+    size_t argc = 1;
+    napi_value argv[1] = {nullptr};
+    napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+    if (argc < 1) {
+        napi_throw_error(env, nullptr, "rawInflate expects 1 ArrayBuffer argument");
+        return nullptr;
+    }
+
+    bool is_arraybuffer = false;
+    napi_is_arraybuffer(env, argv[0], &is_arraybuffer);
+    if (!is_arraybuffer) {
+        napi_throw_error(env, nullptr, "rawInflate expects ArrayBuffer");
+        return nullptr;
+    }
+
+    void *input_data = nullptr;
+    size_t input_length = 0;
+    napi_get_arraybuffer_info(env, argv[0], &input_data, &input_length);
+    if (!input_data || input_length == 0) {
+        napi_throw_error(env, nullptr, "empty inflate input");
+        return nullptr;
+    }
+
+    // Try raw inflate (-MAX_WBITS), then zlib header (MAX_WBITS), then gzip (MAX_WBITS+16)
+    int wbits_options[] = {-MAX_WBITS, MAX_WBITS, MAX_WBITS + 16};
+    for (int wi = 0; wi < 3; wi++) {
+        z_stream strm = {};
+        strm.next_in = static_cast<Bytef *>(input_data);
+        strm.avail_in = static_cast<uInt>(input_length);
+
+        int ret = inflateInit2(&strm, wbits_options[wi]);
+        if (ret != Z_OK) {
+            continue;
+        }
+
+        std::vector<uint8_t> output;
+        uint8_t chunk[16384];
+        bool failed = false;
+        do {
+            strm.next_out = chunk;
+            strm.avail_out = sizeof(chunk);
+            ret = inflate(&strm, Z_NO_FLUSH);
+            if (ret == Z_STREAM_ERROR || ret == Z_NEED_DICT || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR) {
+                failed = true;
+                break;
+            }
+            size_t have = sizeof(chunk) - strm.avail_out;
+            output.insert(output.end(), chunk, chunk + have);
+            if (output.size() > 16u * 1024 * 1024) {
+                failed = true;
+                break;
+            }
+        } while (ret != Z_STREAM_END);
+        inflateEnd(&strm);
+
+        if (!failed && ret == Z_STREAM_END) {
+            void *result_data = nullptr;
+            napi_value result_buffer = nullptr;
+            napi_create_arraybuffer(env, output.size(), &result_data, &result_buffer);
+            if (result_data && !output.empty()) {
+                memcpy(result_data, output.data(), output.size());
+            }
+            return result_buffer;
+        }
+    }
+
+    napi_throw_error(env, nullptr, "inflate decompression failed");
+    return nullptr;
+}
 } // namespace
 
 EXTERN_C_START
@@ -574,6 +729,7 @@ static napi_value Init(napi_env env, napi_value exports)
         { "destroyEngine", nullptr, DestroyEngine, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "loadSource", nullptr, LoadSource, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "dispatch", nullptr, Dispatch, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "rawInflate", nullptr, RawInflate, nullptr, nullptr, nullptr, napi_default, nullptr },
     };
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
     return exports;

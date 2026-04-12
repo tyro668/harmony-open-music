@@ -34,6 +34,9 @@ export struct MiniPlayerBar {
   @Prop progressRatio: number = 0;
   @Prop playbackProgressMs: number = 0;
   @Prop playbackDurationMs: number = 0;
+  @Prop currentLyricText: string = '';
+  @Prop secondaryLyricText: string = '';
+  @Prop isLoadingLyrics: boolean = false;
   @Prop coveredTrackIds: string[] = [];
   onPlayPause: () => void = () => {};
   onNext: () => void = () => {};
@@ -61,6 +64,30 @@ export struct MiniPlayerBar {
 
   private durationTimeText(): string {
     return formatDurationMs(this.playbackDurationMs);
+  }
+
+  private lyricHintText(): string {
+    if (this.isLoadingLyrics) {
+      return '歌词加载中...';
+    }
+    if (this.currentLyricText.trim().length > 0) {
+      return this.currentLyricText;
+    }
+    return '暂无歌词，点按展开歌词页';
+  }
+
+  private lyricHintColor(): string {
+    if (this.isLoadingLyrics) {
+      return this.theme().secondaryText;
+    }
+    if (this.currentLyricText.trim().length > 0) {
+      return this.theme().accent;
+    }
+    return this.theme().tertiaryText;
+  }
+
+  private hasSecondaryLyricText(): boolean {
+    return !this.isLoadingLyrics && this.secondaryLyricText.trim().length > 0;
   }
 
   private discGradientTail(): string {
@@ -384,12 +411,44 @@ export struct MiniPlayerBar {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Text(this.track.artist)
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.theme().secondaryText)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Row({ space: 8 }) {
+            Text(this.track.artist)
+              .layoutWeight(1)
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.theme().secondaryText)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+            Text('歌词')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.theme().chipSelectedText)
+              .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+              .backgroundColor(this.theme().chipSelectedBackground)
+              .borderRadius(999)
+          }
+          .width('100%')
+
+          Column({ space: 3 }) {
+            Text(this.lyricHintText())
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.lyricHintColor())
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
+
+            if (this.hasSecondaryLyricText()) {
+              Text(this.secondaryLyricText)
+                .fontSize(11)
+                .fontColor(this.theme().tertiaryText)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .width('100%')
+            }
+          }
+          .width('100%')
 
           Row() {
             Text(this.progressTimeText())

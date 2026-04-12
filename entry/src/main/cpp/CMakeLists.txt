@@ -37,6 +37,7 @@ target_compile_options(entry PRIVATE
 
 target_link_libraries(entry PUBLIC
     libace_napi.z.so
+    z
     m
     pthread
 )

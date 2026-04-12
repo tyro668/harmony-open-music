@@ -10,7 +10,7 @@ import {
   LIVE_VIEW_ICON_FRAME_COUNT,
   LIVE_VIEW_ICON_FRAME_PREFIX
 } from '../constants/AppConstants';
-import { MusicTrack, PlaybackCollectionSummary } from '../models/AppModels';
+import { MusicTrack, PlaybackCollectionSummary, PlayMode } from '../models/AppModels';
 
 export async function createPlaybackWantAgent(
   context: common.UIAbilityContext,
@@ -35,32 +35,18 @@ export function createPlaybackLiveView(
   track: MusicTrack,
   clickAction: WantAgent,
   sequence: number,
-  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME
+  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME,
+  lyricText: string = '',
+  secondaryLyricText: string = '',
+  compactLayout: boolean = false
 ): liveViewManager.LiveView {
   return {
     id: 1,
     event: 'TIMER',
     sequence: sequence,
     liveViewData: {
-      primary: {
-        title: track.title,
-        content: [{ text: `${track.artist} - ${track.album}` }],
-        keepTime: 0,
-        clickAction: clickAction,
-        layoutData: {
-          layoutType: liveViewManager.LayoutType.LAYOUT_TYPE_PROGRESS,
-          progress: 0,
-          color: '#FFF1F1F1',
-          backgroundColor: '#FF444341'
-        }
-      },
-      capsule: {
-        type: liveViewManager.CapsuleType.CAPSULE_TYPE_TEXT,
-        status: 1,
-        title: track.title,
-        icon: iconFileName,
-        backgroundColor: '#FF2A2928'
-      }
+      primary: buildPlaybackPrimaryData(track, clickAction, iconFileName, lyricText, secondaryLyricText, 0, compactLayout),
+      capsule: buildPlaybackCapsule(track, iconFileName, lyricText, secondaryLyricText, compactLayout)
     }
   };
 }
@@ -71,46 +57,148 @@ export function applyPlaybackLiveViewUpdate(
   sequence: number,
   progress: number,
   playing: boolean,
-  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME
+  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME,
+  lyricText: string = '',
+  secondaryLyricText: string = '',
+  compactLayout: boolean = false
 ): liveViewManager.LiveView {
   liveView.sequence = sequence;
-  liveView.liveViewData.primary.title = track.title;
-  liveView.liveViewData.primary.content = [{ text: `${track.artist} - ${track.album}` }];
-  liveView.liveViewData.primary.layoutData = {
-    layoutType: liveViewManager.LayoutType.LAYOUT_TYPE_PROGRESS,
-    progress: progress,
-    color: '#FFF1F1F1',
-    backgroundColor: '#FF444341'
+  let clickAction = liveView.liveViewData.primary.clickAction;
+  liveView.liveViewData.primary = buildPlaybackPrimaryData(
+    track,
+    clickAction,
+    iconFileName,
+    lyricText,
+    secondaryLyricText,
+    progress,
+    compactLayout
+  );
+  liveView.liveViewData.capsule = buildPlaybackCapsule(track, iconFileName, lyricText, secondaryLyricText, compactLayout);
+  return liveView;
+}
+
+function buildPlaybackPrimaryData(
+  track: MusicTrack,
+  clickAction: WantAgent | undefined,
+  iconFileName: string,
+  lyricText: string,
+  secondaryLyricText: string,
+  progress: number,
+  compactLayout: boolean
+): liveViewManager.PrimaryData {
+  let primary: liveViewManager.PrimaryData = {
+    title: buildPlaybackLiveViewTitle(track, lyricText),
+    content: buildPlaybackLiveViewContent(track, lyricText, secondaryLyricText),
+    keepTime: 0,
+    clickAction: clickAction
   };
-  liveView.liveViewData.capsule = {
+  if (!compactLayout) {
+    primary.layoutData = buildPlaybackProgressLayout(progress, iconFileName);
+  }
+  return primary;
+}
+
+function buildPlaybackCapsule(
+  track: MusicTrack,
+  iconFileName: string,
+  lyricText: string,
+  secondaryLyricText: string,
+  compactLayout: boolean
+): liveViewManager.TextCapsule {
+  let capsule: liveViewManager.TextCapsule = {
     type: liveViewManager.CapsuleType.CAPSULE_TYPE_TEXT,
     status: 1,
-    title: playing ? '正在播放' : '已暂停',
-    icon: iconFileName,
+    title: buildPlaybackLiveViewTitle(track, lyricText),
+    content: buildPlaybackLiveViewCapsuleContent(track, secondaryLyricText),
     backgroundColor: '#FF2A2928'
   };
-  return liveView;
+  if (!compactLayout) {
+    capsule.icon = iconFileName;
+  }
+  return capsule;
+}
+
+function buildPlaybackLiveViewTitle(track: MusicTrack, lyricText: string): string {
+  let titleText = lyricText.trim();
+  if (titleText.length > 0) {
+    return titleText;
+  }
+  return track.title;
+}
+
+function buildPlaybackLiveViewContent(
+  track: MusicTrack,
+  lyricText: string,
+  secondaryLyricText: string
+): Array<liveViewManager.RichText> {
+  let trackMeta = `${track.artist} - ${track.album}`;
+  let primaryLyricText = lyricText.trim();
+  if (primaryLyricText.length === 0) {
+    return [
+      createLiveViewRichText(trackMeta)
+    ];
+  }
+  let secondaryText = secondaryLyricText.trim().length > 0 ? secondaryLyricText.trim() : trackMeta;
+  return [
+    createLiveViewRichText(track.title),
+    createLiveViewRichText(secondaryText)
+  ];
+}
+
+function buildPlaybackLiveViewCapsuleContent(track: MusicTrack, secondaryLyricText: string): string {
+  let secondaryText = secondaryLyricText.trim();
+  if (secondaryText.length > 0) {
+    return secondaryText;
+  }
+  return `${track.artist} - ${track.album}`;
+}
+
+function buildPlaybackProgressLayout(progress: number, iconFileName: string): liveViewManager.ProgressLayout {
+  let normalizedProgress = Math.max(0, Math.min(progress, 100));
+  let layout: liveViewManager.ProgressLayout = {
+    layoutType: liveViewManager.LayoutType.LAYOUT_TYPE_PROGRESS,
+    progress: normalizedProgress,
+    color: '#FFF1F1F1',
+    backgroundColor: '#FF444341',
+    nodeIcons: [iconFileName]
+  };
+  return layout;
+}
+
+function createLiveViewRichText(text: string): liveViewManager.RichText {
+  let richText: liveViewManager.RichText = {
+    text: text
+  };
+  return richText;
 }
 
 export function applyStoppedLiveViewUpdate(
   liveView: liveViewManager.LiveView,
   sequence: number,
-  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME
+  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME,
+  compactLayout: boolean = false
 ): liveViewManager.LiveView {
   liveView.sequence = sequence;
-  liveView.liveViewData.primary.layoutData = {
-    layoutType: liveViewManager.LayoutType.LAYOUT_TYPE_PROGRESS,
-    progress: 100,
-    color: '#FFF1F1F1',
-    backgroundColor: '#FF444341'
+  let clickAction = liveView.liveViewData.primary.clickAction;
+  liveView.liveViewData.primary = {
+    title: '播放结束',
+    content: [createLiveViewRichText('可返回应用继续播放')],
+    keepTime: 0,
+    clickAction: clickAction
   };
-  liveView.liveViewData.capsule = {
+  if (!compactLayout) {
+    liveView.liveViewData.primary.layoutData = buildPlaybackProgressLayout(100, iconFileName);
+  }
+  let capsule: liveViewManager.TextCapsule = {
     type: liveViewManager.CapsuleType.CAPSULE_TYPE_TEXT,
     status: 1,
     title: '播放结束',
-    icon: iconFileName,
     backgroundColor: '#FF2A2928'
   };
+  if (!compactLayout) {
+    capsule.icon = iconFileName;
+  }
+  liveView.liveViewData.capsule = capsule;
   return liveView;
 }
 
@@ -122,7 +210,17 @@ export function resolveLiveViewIconFileName(playing: boolean, frameIndex: number
   return `${LIVE_VIEW_ICON_FRAME_PREFIX}${normalizedIndex}.png`;
 }
 
-export function createSessionMetadata(track: MusicTrack, coverImageUri?: string): avSession.AVMetadata {
+export function createSessionMetadata(
+  track: MusicTrack,
+  coverImageUri?: string,
+  durationMs?: number,
+  lyricContent?: string,
+  previousAssetId?: string,
+  nextAssetId?: string,
+  singleLyricText?: string,
+  subtitleText?: string,
+  descriptionText?: string
+): avSession.AVMetadata {
   let metadata: avSession.AVMetadata = {
     assetId: track.id,
     title: track.title,
@@ -132,13 +230,54 @@ export function createSessionMetadata(track: MusicTrack, coverImageUri?: string)
   if (coverImageUri && coverImageUri.length > 0) {
     metadata.mediaImage = coverImageUri;
   }
+  if (durationMs !== undefined && durationMs > 0) {
+    metadata.duration = durationMs;
+  }
+  if (lyricContent && lyricContent.length > 0) {
+    metadata.lyric = lyricContent;
+  }
+  if (singleLyricText && singleLyricText.length > 0) {
+    metadata.singleLyricText = singleLyricText;
+  }
+  if (subtitleText && subtitleText.length > 0) {
+    metadata.subtitle = subtitleText;
+  }
+  if (descriptionText && descriptionText.length > 0) {
+    metadata.description = descriptionText;
+  }
+  if (previousAssetId && previousAssetId.length > 0) {
+    metadata.previousAssetId = previousAssetId;
+  }
+  if (nextAssetId && nextAssetId.length > 0) {
+    metadata.nextAssetId = nextAssetId;
+  }
   return metadata;
+}
+
+export function playModeToLoopMode(playMode: PlayMode): avSession.LoopMode {
+  if (playMode === PlayMode.Shuffle) {
+    return avSession.LoopMode.LOOP_MODE_SHUFFLE;
+  } else if (playMode === PlayMode.Loop) {
+    return avSession.LoopMode.LOOP_MODE_SINGLE;
+  }
+  return avSession.LoopMode.LOOP_MODE_LIST;
+}
+
+export function loopModeToPlayMode(loopMode: avSession.LoopMode): PlayMode {
+  if (loopMode === avSession.LoopMode.LOOP_MODE_SHUFFLE) {
+    return PlayMode.Shuffle;
+  } else if (loopMode === avSession.LoopMode.LOOP_MODE_SINGLE) {
+    return PlayMode.Loop;
+  }
+  return PlayMode.Sequential;
 }
 
 export function createPlaybackState(
   playing: boolean,
   playbackProgressMs: number,
-  playbackDurationMs: number
+  playbackDurationMs: number,
+  playMode: PlayMode = PlayMode.Sequential,
+  isFavorite: boolean = false
 ): avSession.AVPlaybackState {
   return {
     state: playing ? avSession.PlaybackState.PLAYBACK_STATE_PLAY : avSession.PlaybackState.PLAYBACK_STATE_PAUSE,
@@ -146,7 +285,9 @@ export function createPlaybackState(
       elapsedTime: playbackProgressMs,
       updateTime: Date.now()
     },
-    duration: playbackDurationMs
+    duration: playbackDurationMs,
+    loopMode: playModeToLoopMode(playMode),
+    isFavorite: isFavorite
   };
 }
 

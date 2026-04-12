@@ -4,6 +4,7 @@ import { image } from '@kit.ImageKit';
 import fs from '@ohos.file.fs';
 
 import { MusicTrack } from '../models/AppModels';
+import { lineLyricFromLxLyric } from '../utils/LyricsParser';
 
 function resolveTrackArtworkPath(track: MusicTrack): string {
   if (track.filePath.length > 0) {
@@ -99,22 +100,76 @@ export async function releaseTrackArtwork(pixelMap: image.PixelMap | null | unde
   }
 }
 
-export async function extractTrackLyrics(track: MusicTrack): Promise<string> {
-  // Try external .lrc file next to the audio file
+export interface TrackLyricsResult {
+  lyric: string;
+  tlyric: string;
+  rlyric: string;
+  lxlyric: string;
+}
+
+export async function extractTrackLyrics(track: MusicTrack): Promise<TrackLyricsResult> {
+  let result: TrackLyricsResult = { lyric: '', tlyric: '', rlyric: '', lxlyric: '' };
   let playablePath = resolveTrackArtworkPath(track);
-  if (playablePath.length > 0) {
-    let lrcPath = playablePath.replace(/\.[^.]+$/, '.lrc');
-    try {
-      let exists = fs.accessSync(lrcPath);
-      if (exists) {
-        let content = fs.readTextSync(lrcPath);
-        if (content.length > 0) {
-          return content;
-        }
-      }
-    } catch (_) {
-      // .lrc file not found or unreadable
-    }
+  if (playablePath.length === 0) {
+    return result;
   }
-  return '';
+  // Load main .lrc file
+  let lrcPath = playablePath.replace(/\.[^.]+$/, '.lrc');
+  try {
+    let exists = fs.accessSync(lrcPath);
+    if (exists) {
+      let content = fs.readTextSync(lrcPath);
+      if (content.length > 0) {
+        result.lyric = content;
+      }
+    }
+  } catch (_) {
+    // .lrc file not found or unreadable
+  }
+  // Load line-by-line .lxlyric.lrc file and fall back to it if plain lrc is absent
+  let lxlyricPath = playablePath.replace(/\.[^.]+$/, '.lxlyric.lrc');
+  try {
+    let exists = fs.accessSync(lxlyricPath);
+    if (exists) {
+      let content = fs.readTextSync(lxlyricPath);
+      if (content.length > 0) {
+        result.lxlyric = content;
+      }
+    }
+  } catch (_) {
+    // lxlyric file not found or unreadable
+  }
+  if (result.lyric.length === 0 && result.lxlyric.length > 0) {
+    result.lyric = lineLyricFromLxLyric(result.lxlyric);
+  }
+  if (result.lyric.length === 0) {
+    return result;
+  }
+  // Load translated .tlyric.lrc file
+  let tlyricPath = playablePath.replace(/\.[^.]+$/, '.tlyric.lrc');
+  try {
+    let exists = fs.accessSync(tlyricPath);
+    if (exists) {
+      let content = fs.readTextSync(tlyricPath);
+      if (content.length > 0) {
+        result.tlyric = content;
+      }
+    }
+  } catch (_) {
+    // translated lyric file not found or unreadable
+  }
+  // Load romanized .rlyric.lrc file
+  let rlyricPath = playablePath.replace(/\.[^.]+$/, '.rlyric.lrc');
+  try {
+    let exists = fs.accessSync(rlyricPath);
+    if (exists) {
+      let content = fs.readTextSync(rlyricPath);
+      if (content.length > 0) {
+        result.rlyric = content;
+      }
+    }
+  } catch (_) {
+    // romanized lyric file not found or unreadable
+  }
+  return result;
 }

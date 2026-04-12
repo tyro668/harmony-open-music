@@ -143,8 +143,10 @@ import {
   handleJsEngineInitPayload,
   parseQuickJsLyricResponse,
   parseQuickJsMusicUrlResponse,
-  resolveSourceTrackQuality
+  resolveSourceTrackQuality,
+  SourceLyricResult
 } from '../services/QuickJsSourceService';
+import { fetchBuiltInSourceLyrics } from '../services/SourceLyricsService';
 import {
   applyPlaybackLiveViewUpdate,
   applyStoppedLiveViewUpdate,
@@ -154,6 +156,7 @@ import {
   createPlaybackState,
   createPlaybackWantAgent,
   createSessionMetadata,
+  loopModeToPlayMode,
   resolveLiveViewIconFileName,
   startAudioBackgroundTask,
   stopAudioBackgroundTask
@@ -176,6 +179,10 @@ class SourceImportTask {
     this.track = track;
   }
 }
+
+const LYRIC_REPAIR_SEARCH_SOURCES: string[] = ['kw', 'kg', 'tx', 'wy', 'mg'];
+const LYRIC_REPAIR_MIN_MATCH_SCORE: number = 145;
+const LYRIC_REPAIR_STRONG_MATCH_SCORE: number = 190;
 
 @Entry
 @Component
@@ -250,6 +257,7 @@ struct Index {
   @State currentLyrics: LyricLine[] = [];
   @State currentLyricIndex: number = -1;
   @State isLoadingLyrics: boolean = false;
+  @State lyricRepairingTrackIds: string[] = [];
   private lyricsTrackId: string = '';
 
   private jsEngineKey: string = '';
@@ -293,6 +301,8 @@ struct Index {
   private liveView: liveViewManager.LiveView | null = null;
   private liveViewSequence: number = 0;
   private liveViewCoverTrackId: string = '';
+  private liveViewUnavailable: boolean = false;
+  private liveViewCompactLayout: boolean = false;
   private coverArtFilePath: string = '';
   private session: avSession.AVSession | null = null;
   private isBackgroundTaskRunning: boolean = false;
@@ -328,6 +338,7 @@ struct Index {
           LyricsPanel({
             lyrics: this.currentLyrics,
             currentIndex: this.currentLyricIndex,
+            currentTimeMs: this.playbackProgressMs,
             isLoading: this.isLoadingLyrics,
             onClose: () => {
               this.showLyricsPanel = false;
@@ -352,6 +363,9 @@ struct Index {
           progressRatio: playbackProgressRatio(this.displayedPlaybackProgressMs(), this.playbackDurationMs),
           playbackProgressMs: this.displayedPlaybackProgressMs(),
           playbackDurationMs: this.playbackDurationMs,
+          currentLyricText: this.currentLyricPreviewText(),
+          secondaryLyricText: this.currentLyricSecondaryText(),
+          isLoadingLyrics: this.isLoadingLyrics,
           coveredTrackIds: this.trackArtworkIds,
           onPlayPause: () => {
             void this.handleMiniPlayPause();
@@ -736,8 +750,12 @@ struct Index {
         ImportedTrackManagerPanel({
           tracks: this.localTracks,
           coveredTrackIds: this.trackArtworkIds,
+          isRepairingLyrics: this.lyricRepairingTrackIds.length > 0,
           onClose: () => {
             this.showImportedTrackManager = false;
+          },
+          onRepairMissingLyrics: () => {
+            void this.repairMissingImportedTrackLyrics();
           },
           onMoveTrackBefore: (trackId: string, referenceTrackId: string) => {
             this.moveImportedTrackBefore(trackId, referenceTrackId);
@@ -1190,28 +1208,73 @@ struct Index {
   }
 
   private async startMusicLiveView(track: MusicTrack): Promise<void> {
+    if (this.liveViewUnavailable) {
+      this.liveView = null;
+      this.liveViewCompactLayout = false;
+      return;
+    }
     try {
       let enabled = await liveViewManager.isLiveViewEnabled();
       if (!enabled) {
         console.info('live view is disabled');
+        this.liveViewUnavailable = true;
+        this.liveView = null;
+        this.liveViewCompactLayout = false;
         return;
       }
       this.liveViewSequence = 1;
       this.liveViewIconFrameIndex = 0;
       await this.saveLiveViewCoverIcon(track.id);
-      let iconFile = this.coverArtFilePath.length > 0 ? this.coverArtFilePath : LIVE_VIEW_ICON_FILE_NAME;
+      let iconFile = this.currentLiveViewIconFileName(false);
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
-      this.liveView = createPlaybackLiveView(
+      let nextLiveView = createPlaybackLiveView(
         track,
         clickAction,
         this.liveViewSequence,
-        iconFile
+        iconFile,
+        this.currentLyricPreviewText(),
+        this.currentLyricSecondaryText(),
+        false
       );
-      await liveViewManager.startLiveView(this.liveView);
+      await liveViewManager.startLiveView(nextLiveView);
+      this.liveView = nextLiveView;
+      this.liveViewCompactLayout = false;
       console.info('startMusicLiveView succeeded');
     } catch (error) {
-      console.error(`startMusicLiveView failed: ${JSON.stringify(error)}`);
+      let handledError: BusinessError = error as BusinessError;
+      let errorCode = handledError.code;
+      if (errorCode === 401) {
+        try {
+          let iconFile = this.currentLiveViewIconFileName(false);
+          let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+          let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
+          let compactLiveView = createPlaybackLiveView(
+            track,
+            clickAction,
+            this.liveViewSequence,
+            iconFile,
+            this.currentLyricPreviewText(),
+            this.currentLyricSecondaryText(),
+            true
+          );
+          await liveViewManager.startLiveView(compactLiveView);
+          this.liveView = compactLiveView;
+          this.liveViewCompactLayout = true;
+          console.info('startMusicLiveView succeeded with compact layout');
+          return;
+        } catch (compactError) {
+          handledError = compactError as BusinessError;
+          errorCode = handledError.code;
+          console.error(`startMusicLiveView compact retry failed: ${JSON.stringify(compactError)}`);
+        }
+      }
+      console.error(`startMusicLiveView failed: ${JSON.stringify(handledError)}`);
+      if (errorCode === 401 || errorCode === 1003500004 || errorCode === 1003500005) {
+        this.liveViewUnavailable = true;
+      }
+      this.liveView = null;
+      this.liveViewCompactLayout = false;
     }
   }
 
@@ -1225,7 +1288,7 @@ struct Index {
       if (track.id !== this.liveViewCoverTrackId) {
         await this.saveLiveViewCoverIcon(track.id);
       }
-      let iconFile = this.coverArtFilePath.length > 0 ? this.coverArtFilePath : this.currentLiveViewIconFileName(playing);
+      let iconFile = this.currentLiveViewIconFileName(playing);
       let progress = this.playbackDurationMs > 0 ? Math.round(this.playbackProgressMs / this.playbackDurationMs * 100) : 0;
       this.liveView = applyPlaybackLiveViewUpdate(
         this.liveView,
@@ -1233,11 +1296,22 @@ struct Index {
         this.liveViewSequence,
         progress,
         playing,
-        iconFile
+        iconFile,
+        this.currentLyricPreviewText(),
+        this.currentLyricSecondaryText(),
+        this.liveViewCompactLayout
       );
       await liveViewManager.updateLiveView(this.liveView);
     } catch (error) {
       console.error(`updateMusicLiveView failed: ${JSON.stringify(error)}`);
+      let errorCode = (error as BusinessError).code;
+      if (errorCode === 1003500009 || errorCode === 1003500010 || errorCode === 401) {
+        if (errorCode === 401) {
+          this.liveViewUnavailable = true;
+        }
+        this.liveView = null;
+        this.liveViewCompactLayout = false;
+      }
     }
   }
 
@@ -1250,14 +1324,17 @@ struct Index {
       this.liveView = applyStoppedLiveViewUpdate(
         this.liveView,
         this.liveViewSequence,
-        this.currentLiveViewIconFileName(false)
+        this.currentLiveViewIconFileName(false),
+        this.liveViewCompactLayout
       );
       await liveViewManager.stopLiveView(this.liveView);
       this.liveView = null;
+      this.liveViewCompactLayout = false;
       console.info('stopMusicLiveView succeeded');
     } catch (error) {
       console.error(`stopMusicLiveView failed: ${JSON.stringify(error)}`);
       this.liveView = null;
+      this.liveViewCompactLayout = false;
     }
   }
 
@@ -1268,8 +1345,8 @@ struct Index {
       let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
       let session = await avSession.createAVSession(context, 'MusicPlayer', 'audio');
       this.session = session;
-      let coverUri = this.coverArtFilePath.length > 0 ? fileUri.getUriFromPath(this.coverArtFilePath) : '';
-      await session.setAVMetadata(createSessionMetadata(track, coverUri));
+      let navIds = this.resolveAdjacentTrackIds(track.id);
+      await session.setAVMetadata(this.buildAVSessionMetadata(track, track.durationMs, navIds[0], navIds[1]));
       await session.setLaunchAbility(clickAction);
       await this.refreshAVSessionQueue();
 
@@ -1285,6 +1362,19 @@ struct Index {
       session.on('playPrevious', () => {
         void this.playPreviousTrack();
       });
+      session.on('seek', (time: number) => {
+        void this.seekCurrentTrack(time);
+      });
+      session.on('fastForward', () => {
+        void this.seekCurrentTrack(this.playbackProgressMs + 15000);
+      });
+      session.on('rewind', () => {
+        void this.seekCurrentTrack(Math.max(0, this.playbackProgressMs - 15000));
+      });
+      session.on('setLoopMode', (mode: avSession.LoopMode) => {
+        this.playMode = loopModeToPlayMode(mode);
+        void this.updateAVSessionState(this.isPlaying);
+      });
       session.on('toggleFavorite', (assetId: string) => {
         this.toggleFavorite(assetId);
       });
@@ -1297,13 +1387,172 @@ struct Index {
     }
   }
 
+  private resolveAdjacentTrackIds(trackId: string): string[] {
+    let queueTracks = this.playQueueTracks();
+    if (queueTracks.length === 0) {
+      return ['', ''];
+    }
+    let index = queueTracks.findIndex((track: MusicTrack) => track.id === trackId);
+    if (index < 0) {
+      return ['', ''];
+    }
+    let prevIndex = (index + queueTracks.length - 1) % queueTracks.length;
+    let nextIndex = (index + 1) % queueTracks.length;
+    return [queueTracks[prevIndex].id, queueTracks[nextIndex].id];
+  }
+
+  private currentTrackIsFavorite(): boolean {
+    let track = this.localTracks.find((t: MusicTrack) => t.id === this.currentTrackId);
+    return track ? track.isFavorite : false;
+  }
+
+  private currentLyricMetadataText(): string {
+    let lyricText = this.currentLyricPreviewText().trim();
+    if (lyricText.length > 0) {
+      return lyricText;
+    }
+    return '';
+  }
+
+  private formatLyricTimeTag(timeMs: number): string {
+    let normalizedMs = Math.max(0, timeMs);
+    let totalMinutes = Math.floor(normalizedMs / 60000);
+    let seconds = Math.floor((normalizedMs % 60000) / 1000);
+    let hundredths = Math.floor((normalizedMs % 1000) / 10);
+    return `[${totalMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${hundredths.toString().padStart(2, '0')}]`;
+  }
+
+  private currentLyricContentText(): string {
+    if (this.currentLyrics.length === 0) {
+      return '';
+    }
+    let lines: string[] = [];
+    for (let index = 0; index < this.currentLyrics.length; index++) {
+      let line = this.currentLyrics[index];
+      let timeTag = this.formatLyricTimeTag(line.timeMs);
+      let primaryText = line.text.trim();
+      if (primaryText.length > 0) {
+        lines.push(`${timeTag}${primaryText}`);
+      }
+      for (let extendedIndex = 0; extendedIndex < line.extendedLyrics.length; extendedIndex++) {
+        let extendedText = line.extendedLyrics[extendedIndex].trim();
+        if (extendedText.length === 0 || extendedText === primaryText) {
+          continue;
+        }
+        lines.push(`${timeTag}${extendedText}`);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  private avSessionTrackMetaText(track: MusicTrack): string {
+    let artist = track.artist.trim();
+    let album = track.album.trim();
+    if (artist.length > 0 && album.length > 0) {
+      return `${artist} · ${album}`;
+    }
+    if (artist.length > 0) {
+      return artist;
+    }
+    if (album.length > 0) {
+      return album;
+    }
+    return track.title;
+  }
+
+  private avSessionSubtitleText(track: MusicTrack, lyricText: string): string {
+    let secondaryLyricText = this.currentLyricSecondaryText().trim();
+    if (this.liveViewUnavailable && lyricText.length > 0) {
+      return track.title;
+    }
+    if (secondaryLyricText.length > 0) {
+      return secondaryLyricText;
+    }
+    let metaText = this.avSessionTrackMetaText(track);
+    return metaText !== track.title ? metaText : '';
+  }
+
+  private avSessionDescriptionText(track: MusicTrack, lyricText: string): string {
+    let secondaryLyricText = this.currentLyricSecondaryText().trim();
+    let metaText = this.avSessionTrackMetaText(track);
+    if (this.liveViewUnavailable && lyricText.length > 0) {
+      if (secondaryLyricText.length > 0) {
+        return secondaryLyricText;
+      }
+      return metaText;
+    }
+    let subtitleText = this.avSessionSubtitleText(track, lyricText);
+    if (metaText.length > 0 && metaText !== subtitleText) {
+      return metaText;
+    }
+    return '';
+  }
+
+  private avSessionDisplayTrack(track: MusicTrack): MusicTrack {
+    let lyricText = this.currentLyricMetadataText();
+    if (!this.liveViewUnavailable || lyricText.length === 0) {
+      return track;
+    }
+    let displayTrack = copyTrack(track);
+    displayTrack.title = lyricText;
+    displayTrack.artist = track.title;
+    let albumText = track.artist.trim().length > 0 ? track.artist.trim() : track.album.trim();
+    displayTrack.album = albumText.length > 0 ? albumText : '歌词';
+    return displayTrack;
+  }
+
+  private currentSessionCoverUri(): string {
+    if (this.coverArtFilePath.length === 0) {
+      return '';
+    }
+    try {
+      if (!fs.accessSync(this.coverArtFilePath)) {
+        return '';
+      }
+      return fileUri.getUriFromPath(this.coverArtFilePath);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  private buildAVSessionMetadata(
+    track: MusicTrack,
+    durationMs: number,
+    previousAssetId: string,
+    nextAssetId: string
+  ): avSession.AVMetadata {
+    let lyricText = this.currentLyricMetadataText();
+    let metadataTrack = this.avSessionDisplayTrack(track);
+    let subtitleText = this.avSessionSubtitleText(track, lyricText);
+    let descriptionText = this.avSessionDescriptionText(track, lyricText);
+    let metadata = createSessionMetadata(
+      metadataTrack,
+      this.currentSessionCoverUri(),
+      durationMs,
+      this.currentLyricContentText(),
+      previousAssetId,
+      nextAssetId,
+      lyricText,
+      subtitleText,
+      descriptionText
+    );
+    console.info(
+      `applyAVSessionMetadata: liveViewUnavailable=${this.liveViewUnavailable}, compact=${this.liveViewCompactLayout}, ` +
+      `title=${metadata.title ?? ''}, subtitle=${metadata.subtitle ?? ''}, singleLyric=${metadata.singleLyricText ?? ''}`
+    );
+    return metadata;
+  }
+
   private async updateAVSessionState(playing: boolean): Promise<void> {
     if (!this.session) {
       return;
     }
     try {
       await this.session.setAVPlaybackState(
-        createPlaybackState(playing, this.playbackProgressMs, this.playbackDurationMs)
+        createPlaybackState(
+          playing, this.playbackProgressMs, this.playbackDurationMs,
+          this.playMode, this.currentTrackIsFavorite()
+        )
       );
     } catch (error) {
       console.error(`updateAVSessionState failed: ${JSON.stringify(error)}`);
@@ -1315,8 +1564,9 @@ struct Index {
       return;
     }
     try {
-      let coverUri = this.coverArtFilePath.length > 0 ? fileUri.getUriFromPath(this.coverArtFilePath) : '';
-      await this.session.setAVMetadata(createSessionMetadata(track, coverUri));
+      let durationMs = this.playbackDurationMs > 0 ? this.playbackDurationMs : track.durationMs;
+      let navIds = this.resolveAdjacentTrackIds(track.id);
+      await this.session.setAVMetadata(this.buildAVSessionMetadata(track, durationMs, navIds[0], navIds[1]));
     } catch (error) {
       console.error(`updateAVSessionCoverArt failed: ${JSON.stringify(error)}`);
     }
@@ -1922,22 +2172,409 @@ struct Index {
     this.currentLyricIndex = -1;
     this.isLoadingLyrics = true;
     try {
-      let rawLrc = await extractTrackLyrics(track);
+      let lyricsResult = await extractTrackLyrics(track);
       if (this.lyricsTrackId !== track.id) {
         return;
       }
-      if (rawLrc.length > 0) {
-        this.currentLyrics = parseLrcLyrics(rawLrc);
+      let mainLyric = lyricsResult.lxlyric.length > 0 ? lyricsResult.lxlyric : lyricsResult.lyric;
+      if (mainLyric.length > 0) {
+        let extendedLyrics: string[] = [];
+        if (lyricsResult.tlyric.length > 0) {
+          extendedLyrics.push(lyricsResult.tlyric);
+        }
+        if (lyricsResult.rlyric.length > 0) {
+          extendedLyrics.push(lyricsResult.rlyric);
+        }
+        this.currentLyrics = parseLrcLyrics(mainLyric, extendedLyrics);
+        this.currentLyricIndex = findCurrentLyricIndex(this.currentLyrics, this.playbackProgressMs);
       } else {
         this.currentLyrics = [];
+        this.currentLyricIndex = -1;
       }
     } catch (_) {
       this.currentLyrics = [];
+      this.currentLyricIndex = -1;
     } finally {
       if (this.lyricsTrackId === track.id) {
         this.isLoadingLyrics = false;
       }
     }
+    if (this.lyricsTrackId === track.id && track.id === this.currentTrackId) {
+      if (this.liveView !== null) {
+        void this.updateMusicLiveView(this.isPlaying);
+      }
+      if (this.session !== null) {
+        void this.updateAVSessionCoverArt(track);
+      }
+    }
+  }
+
+  private activeLyricLine(): LyricLine | null {
+    if (this.currentLyrics.length === 0) {
+      return null;
+    }
+    if (this.currentLyricIndex >= 0 && this.currentLyricIndex < this.currentLyrics.length) {
+      return this.currentLyrics[this.currentLyricIndex];
+    }
+    return this.currentLyrics[0];
+  }
+
+  private nextLyricLine(): LyricLine | null {
+    if (this.currentLyrics.length === 0) {
+      return null;
+    }
+    let nextIndex = this.currentLyricIndex >= 0 ? this.currentLyricIndex + 1 : 1;
+    if (nextIndex >= 0 && nextIndex < this.currentLyrics.length) {
+      return this.currentLyrics[nextIndex];
+    }
+    return null;
+  }
+
+  private lyricLinePreviewText(line: LyricLine | null): string {
+    if (!line) {
+      return '';
+    }
+    let primaryText = line.text.trim();
+    if (primaryText.length > 0) {
+      return primaryText;
+    }
+    if (line.extendedLyrics.length > 0) {
+      return line.extendedLyrics[0].trim();
+    }
+    return '';
+  }
+
+  private currentLyricPreviewText(): string {
+    return this.lyricLinePreviewText(this.activeLyricLine());
+  }
+
+  private currentLyricSecondaryText(): string {
+    let activeLine = this.activeLyricLine();
+    if (activeLine && activeLine.extendedLyrics.length > 0) {
+      let extendedText = activeLine.extendedLyrics[0].trim();
+      if (extendedText.length > 0 && extendedText !== this.currentLyricPreviewText()) {
+        return extendedText;
+      }
+    }
+    return this.lyricLinePreviewText(this.nextLyricLine());
+  }
+
+  private removeManagedFileIfExists(path: string): void {
+    try {
+      if (fs.accessSync(path)) {
+        fs.unlinkSync(path);
+      }
+    } catch (_) {
+      // ignore missing or protected sidecar files
+    }
+  }
+
+  private writeManagedTextFile(path: string, content: string): void {
+    this.removeManagedFileIfExists(path);
+    let outputFile = fs.openSync(path, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
+    try {
+      fs.writeSync(outputFile.fd, content);
+    } finally {
+      fs.closeSync(outputFile);
+    }
+  }
+
+  private saveTrackLyricSidecars(filePath: string, lyricResult: SourceLyricResult): boolean {
+    if (filePath.trim().length === 0) {
+      return false;
+    }
+    let hasUsableLyric = lyricResult.lyric.trim().length > 0 || lyricResult.lxlyric.trim().length > 0;
+    if (!hasUsableLyric) {
+      return false;
+    }
+    let mainLyricPath = filePath.replace(/\.[^.]+$/, '.lrc');
+    let translatedLyricPath = filePath.replace(/\.[^.]+$/, '.tlyric.lrc');
+    let romanizedLyricPath = filePath.replace(/\.[^.]+$/, '.rlyric.lrc');
+    let lineLyricPath = filePath.replace(/\.[^.]+$/, '.lxlyric.lrc');
+
+    if (lyricResult.lyric.trim().length > 0) {
+      this.writeManagedTextFile(mainLyricPath, lyricResult.lyric);
+    } else {
+      this.removeManagedFileIfExists(mainLyricPath);
+    }
+    if (lyricResult.tlyric.trim().length > 0) {
+      this.writeManagedTextFile(translatedLyricPath, lyricResult.tlyric);
+    } else {
+      this.removeManagedFileIfExists(translatedLyricPath);
+    }
+    if (lyricResult.rlyric.trim().length > 0) {
+      this.writeManagedTextFile(romanizedLyricPath, lyricResult.rlyric);
+    } else {
+      this.removeManagedFileIfExists(romanizedLyricPath);
+    }
+    if (lyricResult.lxlyric.trim().length > 0) {
+      this.writeManagedTextFile(lineLyricPath, lyricResult.lxlyric);
+    } else {
+      this.removeManagedFileIfExists(lineLyricPath);
+    }
+    return true;
+  }
+
+  private async refreshLyricsForTrack(trackId: string): Promise<void> {
+    if (trackId !== this.currentTrackId) {
+      return;
+    }
+    let currentTrack = this.localTracks.find((track: MusicTrack) => track.id === trackId);
+    if (!currentTrack) {
+      return;
+    }
+    this.lyricsTrackId = '';
+    await this.loadTrackLyrics(currentTrack);
+  }
+
+  private isGenericLyricRepairArtist(artist: string): boolean {
+    let normalizedArtist = artist.trim().toLowerCase();
+    return normalizedArtist.length === 0 || normalizedArtist === '本地导入' || normalizedArtist === '在线下载' ||
+      normalizedArtist === 'unknown artist';
+  }
+
+  private isGenericLyricRepairAlbum(album: string): boolean {
+    let normalizedAlbum = album.trim().toLowerCase();
+    return normalizedAlbum.length === 0 || normalizedAlbum === 'downloads' || normalizedAlbum === '本地音乐' ||
+      normalizedAlbum === '网络导入' || normalizedAlbum === '在线下载';
+  }
+
+  private isLyricRepairTrackCandidate(track: MusicTrack): boolean {
+    let sourceImportKey = track.sourceImportKey ?? '';
+    if (!track.isImported || track.filePath.trim().length === 0) {
+      return false;
+    }
+    if (sourceImportKey.startsWith('baidupan:')) {
+      return false;
+    }
+    return track.folder === 'downloads' || sourceImportKey.length > 0;
+  }
+
+  private normalizeLyricRepairText(text: string): string {
+    return text.trim().toLowerCase().replace(/[\s"'`~!！@#￥$%^&*()（）_\-+=|\\[\]{};:：,，.。/?？<>《》、·]/g, '');
+  }
+
+  private lyricRepairTokens(text: string): string[] {
+    let parts = text.trim().toLowerCase().split(/[\s"'`~!！@#￥$%^&*()（）_\-+=|\\[\]{};:：,，.。/?？<>《》、·]+/);
+    let uniqueTokens = new Set<string>();
+    parts.forEach((part: string) => {
+      let normalizedPart = this.normalizeLyricRepairText(part);
+      if (normalizedPart.length > 0) {
+        uniqueTokens.add(normalizedPart);
+      }
+    });
+    return Array.from(uniqueTokens.values());
+  }
+
+  private lyricRepairFieldScore(target: string, candidate: string, exactScore: number, containScore: number, tokenScore: number): number {
+    let normalizedTarget = this.normalizeLyricRepairText(target);
+    let normalizedCandidate = this.normalizeLyricRepairText(candidate);
+    if (normalizedTarget.length === 0 || normalizedCandidate.length === 0) {
+      return 0;
+    }
+    if (normalizedTarget === normalizedCandidate) {
+      return exactScore;
+    }
+    if (normalizedTarget.indexOf(normalizedCandidate) >= 0 || normalizedCandidate.indexOf(normalizedTarget) >= 0) {
+      return containScore;
+    }
+    let targetTokens = this.lyricRepairTokens(target);
+    let candidateTokens = this.lyricRepairTokens(candidate);
+    if (targetTokens.length === 0 || candidateTokens.length === 0) {
+      return 0;
+    }
+    let sharedTokenCount = targetTokens.filter((token: string) => candidateTokens.indexOf(token) >= 0).length;
+    if (sharedTokenCount === 0) {
+      return 0;
+    }
+    let tokenRatio = sharedTokenCount / Math.max(targetTokens.length, candidateTokens.length);
+    return Math.round(tokenScore * tokenRatio);
+  }
+
+  private lyricRepairDurationScore(track: MusicTrack, candidate: MusicSourceTrack): number {
+    let targetSeconds = Math.floor(track.durationMs / 1000);
+    if (targetSeconds <= 0 || candidate.duration <= 0) {
+      return 0;
+    }
+    let durationDiff = Math.abs(targetSeconds - candidate.duration);
+    if (durationDiff <= 1) {
+      return 28;
+    }
+    if (durationDiff <= 3) {
+      return 22;
+    }
+    if (durationDiff <= 5) {
+      return 16;
+    }
+    if (durationDiff <= 8) {
+      return 8;
+    }
+    if (durationDiff >= 25) {
+      return -24;
+    }
+    if (durationDiff >= 15) {
+      return -12;
+    }
+    return 0;
+  }
+
+  private lyricRepairCandidateScore(track: MusicTrack, candidate: MusicSourceTrack): number {
+    let titleScore = this.lyricRepairFieldScore(track.title, candidate.name, 130, 98, 76);
+    if (titleScore < 60) {
+      return titleScore;
+    }
+    let artistScore = this.lyricRepairFieldScore(track.artist, candidate.singer, 75, 56, 34);
+    let albumScore = this.isGenericLyricRepairAlbum(track.album)
+      ? 0
+      : this.lyricRepairFieldScore(track.album, candidate.album, 22, 14, 8);
+    let durationScore = this.lyricRepairDurationScore(track, candidate);
+    let needsArtistMatch = !this.isGenericLyricRepairArtist(track.artist);
+    let mismatchPenalty = needsArtistMatch && artistScore === 0 ? -40 : 0;
+    return titleScore + artistScore + albumScore + durationScore + mismatchPenalty;
+  }
+
+  private lyricRepairSearchKeywords(track: MusicTrack): string[] {
+    let keywordSet = new Set<string>();
+    let title = track.title.trim();
+    let artist = track.artist.trim();
+    let album = track.album.trim();
+    if (title.length === 0) {
+      return [];
+    }
+    if (!this.isGenericLyricRepairArtist(artist)) {
+      keywordSet.add(`${title} ${artist}`);
+    }
+    if (!this.isGenericLyricRepairAlbum(album)) {
+      keywordSet.add(`${title} ${album}`);
+    }
+    keywordSet.add(title);
+    return Array.from(keywordSet.values());
+  }
+
+  private async findLyricRepairMatch(track: MusicTrack): Promise<MusicSourceTrack | null> {
+    let keywords = this.lyricRepairSearchKeywords(track);
+    let bestMatch: MusicSourceTrack | null = null;
+    let bestScore = 0;
+    for (let keywordIndex = 0; keywordIndex < keywords.length; keywordIndex++) {
+      let keyword = keywords[keywordIndex];
+      for (let sourceIndex = 0; sourceIndex < LYRIC_REPAIR_SEARCH_SOURCES.length; sourceIndex++) {
+        let searchSource = LYRIC_REPAIR_SEARCH_SOURCES[sourceIndex];
+        try {
+          let result = await searchSourceTrackPage(keyword, searchSource, 1);
+          let candidateTracks = result.tracks.slice(0, 10);
+          for (let candidateIndex = 0; candidateIndex < candidateTracks.length; candidateIndex++) {
+            let candidate = candidateTracks[candidateIndex];
+            let score = this.lyricRepairCandidateScore(track, candidate);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = candidate;
+            }
+          }
+          if (bestScore >= LYRIC_REPAIR_STRONG_MATCH_SCORE && bestMatch !== null) {
+            console.info(`lyric repair matched: title=${track.title}, artist=${track.artist}, source=${bestMatch.source}, score=${bestScore}`);
+            return bestMatch;
+          }
+        } catch (error) {
+          let errMessage = error instanceof Error ? error.message : String(error);
+          console.error(`lyric repair search failed: source=${searchSource}, keyword=${keyword}, error=${errMessage}`);
+        }
+      }
+    }
+    if (bestMatch !== null && bestScore >= LYRIC_REPAIR_MIN_MATCH_SCORE) {
+      console.info(`lyric repair selected best match: title=${track.title}, artist=${track.artist}, source=${bestMatch.source}, score=${bestScore}`);
+      return bestMatch;
+    }
+    console.info(`lyric repair skipped low-confidence match: title=${track.title}, artist=${track.artist}, score=${bestScore}`);
+    return null;
+  }
+
+  private updateTrackSourceImportKey(trackId: string, sourceImportKey: string): void {
+    let trackIndex = this.localTracks.findIndex((track: MusicTrack) => track.id === trackId);
+    if (trackIndex < 0) {
+      return;
+    }
+    let currentTrack = this.localTracks[trackIndex];
+    if ((currentTrack.sourceImportKey ?? '') === sourceImportKey) {
+      return;
+    }
+    let updatedTracks = this.localTracks.slice();
+    let updatedTrack = copyTrack(updatedTracks[trackIndex]);
+    updatedTrack.sourceImportKey = sourceImportKey;
+    updatedTracks[trackIndex] = updatedTrack;
+    this.localTracks = updatedTracks;
+    this.schedulePersistState();
+  }
+
+  private async repairLyricsForTrack(track: MusicTrack): Promise<boolean> {
+    let matchedTrack = await this.findLyricRepairMatch(track);
+    if (matchedTrack === null) {
+      return false;
+    }
+    let lyricResult = await fetchBuiltInSourceLyrics(matchedTrack);
+    if (lyricResult === null) {
+      console.info(`lyric repair found source track but no lyrics: source=${matchedTrack.source}, title=${matchedTrack.name}`);
+      return false;
+    }
+    if (!this.saveTrackLyricSidecars(track.filePath, lyricResult)) {
+      return false;
+    }
+    this.updateTrackSourceImportKey(track.id, buildSourceTrackImportKey(matchedTrack));
+    await this.refreshLyricsForTrack(track.id);
+    return true;
+  }
+
+  private async repairMissingImportedTrackLyrics(): Promise<void> {
+    if (this.lyricRepairingTrackIds.length > 0) {
+      return;
+    }
+    let missingLyricTracks: MusicTrack[] = [];
+    let candidateTracks = this.localTracks.filter((track: MusicTrack) => this.isLyricRepairTrackCandidate(track));
+    for (let index = 0; index < candidateTracks.length; index++) {
+      let track = candidateTracks[index];
+      let lyricResult = await extractTrackLyrics(track);
+      if (lyricResult.lyric.trim().length === 0 && lyricResult.lxlyric.trim().length === 0) {
+        missingLyricTracks.push(track);
+      }
+    }
+    if (missingLyricTracks.length === 0) {
+      this.showToast('没有需要补抓歌词的导入歌曲');
+      return;
+    }
+
+    let repairedCount = 0;
+    let failedCount = 0;
+    this.lyricRepairingTrackIds = missingLyricTracks.map((track: MusicTrack) => track.id);
+    try {
+      for (let index = 0; index < missingLyricTracks.length; index++) {
+        let track = missingLyricTracks[index];
+        try {
+          let repaired = await this.repairLyricsForTrack(track);
+          if (repaired) {
+            repairedCount += 1;
+          } else {
+            failedCount += 1;
+          }
+        } catch (error) {
+          let errMessage = error instanceof Error ? error.message : String(error);
+          console.error(`repair lyrics failed: title=${track.title}, artist=${track.artist}, error=${errMessage}`);
+          failedCount += 1;
+        } finally {
+          this.lyricRepairingTrackIds = this.lyricRepairingTrackIds.filter((trackId: string) => trackId !== track.id);
+        }
+      }
+    } finally {
+      this.lyricRepairingTrackIds = [];
+    }
+
+    if (repairedCount > 0 && failedCount > 0) {
+      this.showToast(`已补抓 ${repairedCount} 首歌词，${failedCount} 首未匹配到`);
+      return;
+    }
+    if (repairedCount > 0) {
+      this.showToast(`已补抓 ${repairedCount} 首歌词`);
+      return;
+    }
+    this.showToast('未匹配到可用歌词，请查看日志确认歌曲信息');
   }
 
   private async persistUriPermissions(uris: Array<string>): Promise<void> {
@@ -2345,10 +2982,11 @@ struct Index {
     return parseQuickJsMusicUrlResponse(responsePayloadJson);
   }
 
-  private async requestLyricFromEngine(source: MusicSourceConfig, track: MusicSourceTrack): Promise<string> {
+  private async requestLyricFromEngine(source: MusicSourceConfig, track: MusicSourceTrack): Promise<SourceLyricResult | null> {
     let loaded = await this.loadSourceIntoJsEngine(source);
     if (!loaded) {
-      return '';
+      console.info(`requestLyricFromEngine: JS engine not loaded for source=${track.source}, name=${track.name}, lastError=${this.jsEngineLastError}`);
+      return null;
     }
     try {
       let requestKey = `lyric_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
@@ -2358,16 +2996,14 @@ struct Index {
         buildQuickJsLyricRequest(requestKey, track)
       );
       let result = parseQuickJsLyricResponse(responsePayloadJson);
-      if (result === null || result.lyric.length === 0) {
-        return '';
+      if (result === null) {
+        console.info(`requestLyricFromEngine: source script returned no lyrics for source=${track.source}, name=${track.name}`);
       }
-      // Merge translated lyrics as comments if available
-      if (result.tlyric.length > 0) {
-        return result.lyric + '\n' + result.tlyric;
-      }
-      return result.lyric;
-    } catch (_) {
-      return '';
+      return result;
+    } catch (error) {
+      let errMessage = error instanceof Error ? error.message : JSON.stringify(error);
+      console.error(`request lyric from JS engine failed: source=${track.source}, name=${track.name}, error=${errMessage}`);
+      return null;
     }
   }
 
@@ -2834,18 +3470,18 @@ struct Index {
 
       // Fetch and save lyrics
       try {
-        let lrcContent = await this.requestLyricFromEngine(source, track);
-        if (lrcContent.length > 0) {
-          let lrcPath = targetPath.replace(/\.[^.]+$/, '.lrc');
-          let lrcFile = fs.openSync(lrcPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
-          try {
-            fs.writeSync(lrcFile.fd, lrcContent);
-          } finally {
-            fs.closeSync(lrcFile);
-          }
+        let lyricResult = await fetchBuiltInSourceLyrics(track);
+        if (lyricResult === null) {
+          lyricResult = await this.requestLyricFromEngine(source, track);
         }
-      } catch (_) {
-        // lyrics fetch failure should not block import
+        if (lyricResult !== null && this.saveTrackLyricSidecars(targetPath, lyricResult)) {
+          console.info(`saved lyrics for imported source track: source=${track.source}, name=${track.name}`);
+        } else {
+          console.info(`no lyric fetched for imported source track: source=${track.source}, name=${track.name}`);
+        }
+      } catch (error) {
+        let errMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        console.error(`lyrics fetch failure should not block import: source=${track.source}, name=${track.name}, error=${errMessage}`);
       }
 
       let importedTrack: MusicTrack = {
@@ -3121,6 +3757,9 @@ struct Index {
       this.syncCurrentTrackSelection();
       this.schedulePersistState();
       this.showToast(updatedTracks[localIndex].isFavorite ? '已加入收藏' : '已取消收藏');
+      if (trackId === this.currentTrackId) {
+        void this.updateAVSessionState(this.isPlaying);
+      }
     }
   }
 
@@ -3510,11 +4149,14 @@ struct Index {
         let lyricIdx = findCurrentLyricIndex(this.currentLyrics, time);
         if (lyricIdx !== this.currentLyricIndex) {
           this.currentLyricIndex = lyricIdx;
+          void this.updateMusicLiveView(this.isPlaying);
+          void this.updateAVSessionCoverArt(this.currentTrack());
         }
       }
-      // 每5秒更新一次LiveView进度
+      // 每5秒更新一次LiveView进度和AVSession播放位置
       if (time % 5000 < 100) {
         void this.updateMusicLiveView(this.isPlaying);
+        void this.updateAVSessionState(this.isPlaying);
       }
     });
 
@@ -3525,9 +4167,13 @@ struct Index {
       let actualTime = player.currentTime >= 0 ? player.currentTime : time;
       this.playbackProgressMs = actualTime;
       this.lastProgressSnapshotMs = actualTime;
+      if (this.currentLyrics.length > 0) {
+        this.currentLyricIndex = findCurrentLyricIndex(this.currentLyrics, actualTime);
+      }
       if (!this.isSeekingPlayback) {
         void this.updateMusicLiveView(this.isPlaying);
         void this.updateAVSessionState(this.isPlaying);
+        void this.updateAVSessionCoverArt(this.currentTrack());
       }
     });
 

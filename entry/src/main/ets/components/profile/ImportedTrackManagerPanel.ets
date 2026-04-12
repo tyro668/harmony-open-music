@@ -8,10 +8,12 @@ export struct ImportedTrackManagerPanel {
   @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop tracks: MusicTrack[] = [];
   @Prop coveredTrackIds: string[] = [];
+  @Prop isRepairingLyrics: boolean = false;
   @State activeFilter: string = 'all';
   @State isSelectionMode: boolean = false;
   @State selectedTrackIds: string[] = [];
   onClose: () => void = () => {};
+  onRepairMissingLyrics: () => void = () => {};
   onMoveTrackBefore: (trackId: string, referenceTrackId: string) => void = (_: string, __: string) => {};
   onMoveTrackAfter: (trackId: string, referenceTrackId: string) => void = (_: string, __: string) => {};
   onToggleTrackInPlayQueue: (trackId: string) => void = (_: string) => {};
@@ -312,6 +314,16 @@ export struct ImportedTrackManagerPanel {
             .layoutWeight(1)
 
           Row({ space: 16 }) {
+            Text(this.isRepairingLyrics ? '补抓中' : '一键补抓歌词')
+              .fontSize(13)
+              .fontColor(this.isRepairingLyrics ? this.theme().secondaryText : this.theme().accent)
+              .opacity(this.tracks.length > 0 ? 1 : 0.45)
+              .onClick(() => {
+                if (!this.isRepairingLyrics && this.tracks.length > 0) {
+                  this.onRepairMissingLyrics();
+                }
+              })
+
             Text(this.isSelectionMode ? '取消选择' : '批量管理')
               .fontSize(13)
               .fontColor(this.theme().warningText)

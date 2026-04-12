@@ -5,6 +5,13 @@ interface QuickJsBridgeModule {
   destroyEngine(engineId: string): void;
   loadSource(engineId: string, setupScript: string): string;
   dispatch(engineId: string, engineKey: string, action: string, dataJson: string): string;
+  rawInflate(data: ArrayBuffer): ArrayBuffer;
+}
+
+const nativeBridge: QuickJsBridgeModule = quickJsBridge as QuickJsBridgeModule;
+
+export function rawInflate(data: ArrayBuffer): ArrayBuffer {
+  return nativeBridge.rawInflate(data);
 }
 
 interface QuickJsLoadEnvelope {
@@ -52,7 +59,7 @@ export interface QuickJsHostEvent {
 }
 
 export class QuickJsEngineAdapter {
-  private readonly bridge: QuickJsBridgeModule = quickJsBridge as QuickJsBridgeModule;
+  private readonly bridge: QuickJsBridgeModule = nativeBridge;
   private engineId: string = '';
   private isDisposed: boolean = false;
   private readonly hostRequestHandler: (request: QuickJsHttpRequest) => QuickJsHttpTask;
