@@ -4,6 +4,17 @@ export enum MainTab {
   Profile = 2
 }
 
+export enum AppThemeMode {
+  System = 0,
+  Light = 1,
+  Dark = 2
+}
+
+export enum AppThemeAppearance {
+  Light = 0,
+  Dark = 1
+}
+
 export enum LibraryDimension {
   Song = 0,
   Artist = 1,
@@ -23,9 +34,18 @@ export enum PlayMode {
   Loop = 2
 }
 
+export enum PlaybackCollectionKind {
+  All = 0,
+  Favorites = 1,
+  Album = 2,
+  Artist = 3,
+  Custom = 4
+}
+
 export interface MusicSourceQuality {
   source: string;
   qualitys: string[];
+  preferredQuality?: string;
 }
 
 export interface MusicSourceConfig {
@@ -149,6 +169,7 @@ export interface MusicTrack {
   title: string;
   artist: string;
   album: string;
+  durationMs: number;
   folder: string;
   sourceUri: string;
   filePath: string;
@@ -161,6 +182,29 @@ export interface MusicTrack {
   playCount: number;
   lastPlayedAt: number;
   sourceImportKey?: string;
+}
+
+export interface BaiduPanEntry {
+  fsId: string;
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  size: number;
+  modifiedAt: number;
+}
+
+export interface CustomPlaylist {
+  id: string;
+  name: string;
+  trackIds: string[];
+}
+
+export interface PlaybackCollectionSummary {
+  id: string;
+  title: string;
+  subtitle: string;
+  trackCount: number;
+  kind: PlaybackCollectionKind;
 }
 
 export interface LibraryGroup {

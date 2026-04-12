@@ -1,16 +1,30 @@
 import { image } from '@kit.ImageKit';
 
-import { MusicTrack, PlayMode } from '../../models/AppModels';
+import {
+  PAGE_HEADER_BOTTOM_PADDING,
+  PAGE_HEADER_HEIGHT,
+  PAGE_HEADER_HORIZONTAL_PADDING,
+  PAGE_HEADER_ICON_SIZE,
+  PAGE_HEADER_PRIMARY_FONT_SIZE,
+  PAGE_HEADER_RADIUS,
+  PAGE_HEADER_SECONDARY_FONT_SIZE,
+  PAGE_HEADER_TOP_PADDING
+} from '../../constants/AppConstants';
+import { AppThemeAppearance, MusicTrack, PlayMode } from '../../models/AppModels';
+import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct HomeQueuePage {
+  @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop tracks: MusicTrack[] = [];
   @Prop currentTrackId: string = '';
   @Prop playMode: PlayMode = PlayMode.Sequential;
+  @Prop activeCollectionTitle: string = '全部音乐';
   @Prop showRenameDialog: boolean = false;
   @Prop renameText: string = '';
   @Prop bottomInset: number = 0;
   @Prop coveredTrackIds: string[] = [];
+  onOpenPlaylistDrawer: () => void = () => {};
   onSelectPlayMode: (mode: PlayMode) => void = (_: PlayMode) => {};
   onTrackTap: (track: MusicTrack) => void = (_: MusicTrack) => {};
   onToggleFavorite: (trackId: string) => void = (_: string) => {};
@@ -25,26 +39,50 @@ export struct HomeQueuePage {
     return this.coveredTrackIds.indexOf(trackId) >= 0 && this.coverForTrack(trackId) !== null;
   }
 
+  private theme() {
+    return appThemePalette(this.themeAppearance);
+  }
+
   private trackCover(trackId: string): image.PixelMap {
     return this.coverForTrack(trackId) as image.PixelMap;
+  }
+
+  private playlistTriggerBackground(): string {
+    return this.themeAppearance === AppThemeAppearance.Light
+      ? this.theme().panelSecondaryBackground
+      : '#00000000';
+  }
+
+  private playlistTriggerBorderWidth(): number {
+    return this.themeAppearance === AppThemeAppearance.Light ? 1 : 0;
+  }
+
+  private playlistTriggerBorderColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Light
+      ? this.theme().divider
+      : '#00000000';
+  }
+
+  private trackRenderKey(track: MusicTrack): string {
+    return `${track.id}_${track.isFavorite ? '1' : '0'}`;
   }
 
   @Builder
   private playModeButton(label: string, icon: Resource, mode: PlayMode) {
     Row({ space: 5 }) {
       Image(icon)
-        .width(13)
-        .height(13)
-        .fillColor(this.playMode === mode ? '#FFFFFF' : '#8A8A8A')
+        .width(12)
+        .height(12)
+        .fillColor(this.playMode === mode ? this.theme().onAccent : this.theme().secondaryText)
 
       Text(label)
-        .fontSize(12)
-        .fontColor(this.playMode === mode ? '#FFFFFF' : '#8A8A8A')
+        .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
+        .fontColor(this.playMode === mode ? this.theme().onAccent : this.theme().secondaryText)
         .fontWeight(this.playMode === mode ? FontWeight.Medium : FontWeight.Normal)
     }
-    .padding({ left: 10, right: 10, top: 7, bottom: 7 })
-    .backgroundColor(this.playMode === mode ? '#1DB4B4' : Color.Transparent)
-    .borderRadius(17)
+    .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+    .backgroundColor(this.playMode === mode ? this.theme().accent : Color.Transparent)
+    .borderRadius(14)
     .onClick(() => {
       this.onSelectPlayMode(mode);
     })
@@ -52,30 +90,72 @@ export struct HomeQueuePage {
 
   @Builder
   private playlistHeader() {
-    Row() {
-      Row({ space: 6 }) {
-        Image($r('app.media.ic_list'))
-          .width(14)
-          .height(14)
-          .fillColor('#5DB8C9')
+    Row({ space: 12 }) {
+      Row({ space: 10 }) {
+        Row() {
+          Image($r('app.media.ic_list'))
+            .width(PAGE_HEADER_ICON_SIZE)
+            .height(PAGE_HEADER_ICON_SIZE)
+            .fillColor(this.theme().navActiveIcon)
+        }
+        .width(30)
+        .height(30)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(this.theme().controlSecondaryBackground)
+        .borderRadius(15)
+        .border({
+          width: 1,
+          color: this.theme().controlSecondaryBorder
+        })
 
-        Text(`共 ${this.tracks.length} 首歌曲`)
-          .fontSize(12)
-          .fontColor('#8A8A8A')
+        Column({ space: 2 }) {
+          Text(this.activeCollectionTitle)
+            .fontSize(PAGE_HEADER_PRIMARY_FONT_SIZE)
+            .fontColor(this.theme().primaryText)
+            .fontWeight(FontWeight.Medium)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(`共 ${this.tracks.length} 首`)
+            .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
+            .fontColor(this.theme().secondaryText)
+        }
+        .alignItems(HorizontalAlign.Start)
       }
       .layoutWeight(1)
+      .height(38)
+      .padding({ left: 10, right: 14 })
+      .backgroundColor(this.playlistTriggerBackground())
+      .borderRadius(16)
+      .border({
+        width: this.playlistTriggerBorderWidth(),
+        color: this.playlistTriggerBorderColor()
+      })
+      .onClick(() => {
+        this.onOpenPlaylistDrawer();
+      })
 
-      Row({ space: 0 }) {
+      Row({ space: 2 }) {
         this.playModeButton('随机', $r('app.media.ic_shuffle'), PlayMode.Shuffle)
         this.playModeButton('顺序', $r('app.media.ic_sequential'), PlayMode.Sequential)
         this.playModeButton('循环', $r('app.media.ic_loop'), PlayMode.Loop)
       }
-      .backgroundColor('#1A1A2E')
-      .borderRadius(20)
+      .backgroundColor(this.theme().controlSecondaryBackground)
+      .borderRadius(14)
       .padding(3)
+      .border({
+        width: 1,
+        color: this.theme().controlSecondaryBorder
+      })
     }
     .width('100%')
-    .height(42)
+    .height(PAGE_HEADER_HEIGHT)
+    .padding({ left: 16, right: 8 })
+    .backgroundColor(this.theme().headerBackground)
+    .borderRadius(PAGE_HEADER_RADIUS)
+    .border({
+      width: 1,
+      color: this.theme().headerBorder
+    })
   }
 
   @Builder
@@ -142,7 +222,7 @@ export struct HomeQueuePage {
           .width(58)
           .height(58)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor('#00000066')
+          .backgroundColor(this.theme().maskBackground)
           .borderRadius(14)
         }
         .width(58)
@@ -155,13 +235,13 @@ export struct HomeQueuePage {
         Text(track.title)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.currentTrackId === track.id ? '#FFFFFF' : '#F3F3F3')
+          .fontColor(this.currentTrackId === track.id ? this.theme().primaryText : this.theme().primaryText)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Text(track.artist)
           .fontSize(13)
-          .fontColor('#888888')
+          .fontColor(this.theme().secondaryText)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -171,7 +251,7 @@ export struct HomeQueuePage {
       Image(track.isFavorite ? $r('app.media.ic_heart_filled') : $r('app.media.ic_heart'))
         .width(20)
         .height(20)
-        .fillColor(track.isFavorite ? '#E85D75' : '#666666')
+        .fillColor(track.isFavorite ? '#E85D75' : this.theme().tertiaryText)
         .onClick(() => {
           this.onToggleFavorite(track.id);
         })
@@ -180,28 +260,28 @@ export struct HomeQueuePage {
         Image($r('app.media.ic_clock'))
           .width(14)
           .height(14)
-          .fillColor('#666666')
+          .fillColor(this.theme().tertiaryText)
 
         Text(this.trackDurationText(track))
           .fontSize(13)
-          .fontColor('#666666')
+          .fontColor(this.theme().tertiaryText)
       }
 
       Image($r('app.media.ic_more'))
         .width(20)
         .height(20)
-        .fillColor('#666666')
+        .fillColor(this.theme().tertiaryText)
         .onClick(() => {
           this.onOpenRename(track);
         })
     }
     .width('100%')
     .padding({ left: 12, right: 14, top: 12, bottom: 12 })
-    .backgroundColor(this.currentTrackId === track.id ? '#1A1A30' : '#0D0D1A')
+    .backgroundColor(this.currentTrackId === track.id ? this.theme().activeRowBackground : this.theme().inactiveRowBackground)
     .borderRadius(16)
     .border({
       width: this.currentTrackId === track.id ? 1 : 0,
-      color: '#2A2A44'
+      color: this.theme().activeRowBorder
     })
     .onClick(() => {
       this.onTrackTap(track);
@@ -214,10 +294,10 @@ export struct HomeQueuePage {
       Text('当前没有歌曲')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#F0F0F0')
-      Text('前往“我的”页导入本地音乐或在线下载音频')
+        .fontColor(this.theme().primaryText)
+      Text('前往“我的”页导入本地音乐')
         .fontSize(14)
-        .fontColor('#777777')
+        .fontColor(this.theme().secondaryText)
         .textAlign(TextAlign.Center)
         .lineHeight(22)
     }
@@ -233,14 +313,14 @@ export struct HomeQueuePage {
         Text('修改歌曲名称')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#F7F7F7')
+          .fontColor(this.theme().primaryText)
 
         TextInput({ text: this.renameText, placeholder: '输入新名称' })
-          .placeholderColor('#5E5E5E')
+          .placeholderColor(this.theme().tertiaryText)
           .fontSize(16)
-          .fontColor('#F5F5F5')
-          .backgroundColor('#1A1A1A')
-          .caretColor('#1DB4B4')
+          .fontColor(this.theme().primaryText)
+          .backgroundColor(this.theme().inputBackground)
+          .caretColor(this.theme().accent)
           .borderRadius(14)
           .padding({ left: 14, right: 14, top: 12, bottom: 12 })
           .onChange((value: string) => {
@@ -253,8 +333,8 @@ export struct HomeQueuePage {
             .height(42)
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .backgroundColor('#2A2A2A')
-            .fontColor('#D0D0D0')
+            .backgroundColor(this.theme().panelSecondaryBackground)
+            .fontColor(this.theme().secondaryText)
             .borderRadius(21)
             .onClick(() => {
               this.onCancelRename();
@@ -265,8 +345,8 @@ export struct HomeQueuePage {
             .height(42)
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .backgroundColor('#1DB4B4')
-            .fontColor('#FFFFFF')
+            .backgroundColor(this.theme().accent)
+            .fontColor(this.theme().onAccent)
             .borderRadius(21)
             .onClick(() => {
               this.onConfirmRename();
@@ -276,7 +356,7 @@ export struct HomeQueuePage {
       }
       .width('100%')
       .padding(24)
-      .backgroundColor('#121212')
+      .backgroundColor(this.theme().panelBackground)
       .borderRadius(24)
     }
     .width('100%')
@@ -290,7 +370,12 @@ export struct HomeQueuePage {
           this.playlistHeader()
         }
         .width('100%')
-        .padding({ left: 16, right: 16, top: 14, bottom: 8 })
+        .padding({
+          left: PAGE_HEADER_HORIZONTAL_PADDING,
+          right: PAGE_HEADER_HORIZONTAL_PADDING,
+          top: PAGE_HEADER_TOP_PADDING,
+          bottom: PAGE_HEADER_BOTTOM_PADDING
+        })
 
         Scroll() {
           Column({ space: 4 }) {
@@ -299,7 +384,7 @@ export struct HomeQueuePage {
           } else {
             ForEach(this.tracks, (track: MusicTrack) => {
               this.trackRow(track)
-            }, (track: MusicTrack) => track.id)
+            }, (track: MusicTrack) => this.trackRenderKey(track))
           }
           }
           .width('100%')

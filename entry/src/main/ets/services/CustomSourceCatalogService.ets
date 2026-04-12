@@ -2,7 +2,9 @@ import { MusicSourceConfig, MusicSourceQuality } from '../models/AppModels';
 import {
   defaultMusicSources,
   filterSupportedExploreSources,
+  normalizeMusicSourceQuality,
   parseLxSourceScriptInfo,
+  resolvePreferredSourceQuality,
   simpleHash
 } from '../utils/MusicSourceUtils';
 
@@ -91,6 +93,51 @@ export function removeSourceById(
   return {
     sources: nextSources,
     updated: nextSources.length !== sources.length
+  };
+}
+
+export function updateSourcePreferredQuality(
+  sources: MusicSourceConfig[],
+  sourceId: string,
+  sourceCode: string,
+  quality: string
+): UpdatedSourceCollectionResult {
+  let updated = false;
+  return {
+    sources: sources.map((source: MusicSourceConfig) => {
+      if (source.id !== sourceId) {
+        return source;
+      }
+
+      let nextMusicSources = source.musicSources.map((item: MusicSourceQuality) => {
+        if (item.source !== sourceCode || item.qualitys.indexOf(quality) < 0) {
+          return item;
+        }
+        let normalized = normalizeMusicSourceQuality({
+          source: item.source,
+          qualitys: item.qualitys,
+          preferredQuality: quality
+        });
+        if (resolvePreferredSourceQuality(item) !== normalized.preferredQuality) {
+          updated = true;
+        }
+        return normalized;
+      });
+
+      return {
+        id: source.id,
+        name: source.name,
+        description: source.description,
+        author: source.author,
+        homepage: source.homepage,
+        version: source.version,
+        allowShowUpdateAlert: source.allowShowUpdateAlert,
+        apiUrl: source.apiUrl,
+        apiKey: source.apiKey,
+        musicSources: nextMusicSources
+      };
+    }),
+    updated: updated
   };
 }
 

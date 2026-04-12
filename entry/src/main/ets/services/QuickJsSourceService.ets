@@ -8,6 +8,10 @@ import {
   MusicSourceTrack
 } from '../models/AppModels';
 import { QuickJsHttpRequest, QuickJsHttpTask } from '../utils/QuickJsEngine';
+import {
+  normalizeMusicSourceQuality,
+  resolvePreferredSourceQuality
+} from '../utils/MusicSourceUtils';
 
 export interface JsEngineInitOutcome {
   ready: boolean;
@@ -26,7 +30,10 @@ function extractJsEngineMusicSources(info: JsEngineInitInfo | undefined): MusicS
     let sourceKey = sourceKeys[index];
     let sourceInfo = info.sources[sourceKey];
     if (sourceInfo && sourceInfo.type === 'music') {
-      updatedSources.push({ source: sourceKey, qualitys: sourceInfo.qualitys || ['128k', '320k'] });
+      updatedSources.push(normalizeMusicSourceQuality({
+        source: sourceKey,
+        qualitys: sourceInfo.qualitys || ['128k', '320k']
+      }));
     }
   }
   return updatedSources;
@@ -65,6 +72,14 @@ export function handleJsEngineInitPayload(
       if (source.id !== sourceId) {
         return source;
       }
+      let mergedMusicSources = updatedSources.map((item: MusicSourceQuality) => {
+        let currentSourceQuality = source.musicSources.find((currentItem: MusicSourceQuality) => currentItem.source === item.source);
+        return normalizeMusicSourceQuality({
+          source: item.source,
+          qualitys: item.qualitys,
+          preferredQuality: currentSourceQuality ? resolvePreferredSourceQuality(currentSourceQuality) : item.preferredQuality
+        });
+      });
       return {
         id: source.id,
         name: source.name,
@@ -75,7 +90,7 @@ export function handleJsEngineInitPayload(
         allowShowUpdateAlert: source.allowShowUpdateAlert,
         apiUrl: source.apiUrl,
         apiKey: source.apiKey,
-        musicSources: updatedSources
+        musicSources: mergedMusicSources
       };
     }),
     didUpdateSources: true
@@ -360,22 +375,28 @@ export function parseQuickJsMusicUrlResponse(responsePayloadJson: string): strin
 }
 
 export function resolveSourceTrackQuality(source: MusicSourceConfig, track: MusicSourceTrack): string {
-  let quality = '128k';
   let sourceQuality = source.musicSources.find((item: MusicSourceQuality) => item.source === track.source);
   if (!sourceQuality || sourceQuality.qualitys.length === 0) {
-    return quality;
+    return '128k';
   }
 
-  let preferred: string[] = ['flac', '320k', '128k'];
-  for (let index = 0; index < preferred.length; index++) {
-    let preferredQuality = preferred[index];
-    if (sourceQuality.qualitys.indexOf(preferredQuality) < 0) {
+  let candidateQualities: string[] = [];
+  let selectedQuality = resolvePreferredSourceQuality(sourceQuality);
+  candidateQualities.push(selectedQuality);
+  for (let index = 0; index < sourceQuality.qualitys.length; index++) {
+    let quality = sourceQuality.qualitys[index];
+    if (candidateQualities.indexOf(quality) >= 0) {
       continue;
     }
+    candidateQualities.push(quality);
+  }
+
+  for (let index = 0; index < candidateQualities.length; index++) {
+    let preferredQuality = candidateQualities[index];
     if (track.types.length === 0 || track.types.some((qt: MusicQualityType) => qt.type === preferredQuality)) {
-      quality = preferredQuality;
-      break;
+      return preferredQuality;
     }
   }
-  return quality;
+
+  return selectedQuality;
 }

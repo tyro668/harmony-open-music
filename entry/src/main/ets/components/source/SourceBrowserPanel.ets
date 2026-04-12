@@ -1,8 +1,14 @@
-import { MusicSourceQuality, MusicSourceTrack } from '../../models/AppModels';
-import { sourceDisplayName } from '../../utils/MusicSourceUtils';
+import { AppThemeAppearance, MusicSourceQuality, MusicSourceTrack } from '../../models/AppModels';
+import {
+  resolvePreferredSourceQuality,
+  sourceDisplayName,
+  sourceQualityDisplayName
+} from '../../utils/MusicSourceUtils';
+import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct SourceBrowserPanel {
+  @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop title: string = '音源浏览';
   @Prop subSources: MusicSourceQuality[] = [];
   @Prop activeSearchSource: string = '';
@@ -12,8 +18,10 @@ export struct SourceBrowserPanel {
   @Prop sourceTotal: number = 0;
   @Prop sourceCurrentPage: number = 1;
   @Prop sourceImportingTrackKeys: string[] = [];
+  @Prop sourceQualitySnapshot: string = '';
   onClose: () => void = () => {};
   onSelectSubSource: (sourceCode: string) => void = (_: string) => {};
+  onSelectQuality: (sourceCode: string, quality: string) => void = (_: string, __: string) => {};
   onSearchKeywordChange: (value: string) => void = (_: string) => {};
   onSearch: () => void = () => {};
   onLoadMore: () => void = () => {};
@@ -25,6 +33,70 @@ export struct SourceBrowserPanel {
     let minutes = Math.floor(seconds / 60);
     let remainSeconds = seconds % 60;
     return `${minutes}:${remainSeconds < 10 ? '0' : ''}${remainSeconds}`;
+  }
+
+  private theme() {
+    return appThemePalette(this.themeAppearance);
+  }
+
+  private activeSubSourceItem(): MusicSourceQuality | undefined {
+    let current = this.subSources.find((item: MusicSourceQuality) => item.source === this.activeSearchSource);
+    if (current) {
+      return current;
+    }
+    return this.subSources.length > 0 ? this.subSources[0] : undefined;
+  }
+
+  private preferredQuality(item: MusicSourceQuality): string {
+    let snapshot = this.sourceQualitySnapshot;
+    if (snapshot.length < 0) {
+      return '128k';
+    }
+    return resolvePreferredSourceQuality(item);
+  }
+
+  private isQualitySelected(item: MusicSourceQuality, quality: string): boolean {
+    return this.preferredQuality(item) === quality;
+  }
+
+  @Builder
+  private qualityChip(item: MusicSourceQuality, quality: string) {
+    Text(sourceQualityDisplayName(quality))
+      .fontSize(11)
+      .fontWeight(this.isQualitySelected(item, quality) ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.isQualitySelected(item, quality) ? this.theme().onAccent : this.theme().secondaryText)
+      .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+      .backgroundColor(this.isQualitySelected(item, quality) ? this.theme().accent : this.theme().panelSecondaryBackground)
+      .borderRadius(12)
+      .border({
+        width: 1,
+        color: this.isQualitySelected(item, quality) ? this.theme().accent : this.theme().divider
+      })
+      .onClick(() => {
+        this.onSelectQuality(item.source, quality);
+      })
+  }
+
+  @Builder
+  private qualitySelector(item: MusicSourceQuality) {
+    Column({ space: 8 }) {
+      Text(`当前音质 ${sourceQualityDisplayName(this.preferredQuality(item))}`)
+        .fontSize(12)
+        .fontColor(this.theme().secondaryText)
+
+      Scroll() {
+        Row({ space: 8 }) {
+          ForEach(item.qualitys, (quality: string) => {
+            this.qualityChip(item, quality)
+          }, (quality: string) => `${item.source}_${quality}`)
+        }
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .width('100%')
+    }
+    .width('100%')
+    .padding({ left: 24, right: 24, bottom: 10 })
   }
 
   private resolvedTrackActionLabel(track: MusicSourceTrack): string {
@@ -40,23 +112,23 @@ export struct SourceBrowserPanel {
   private importButtonBackground(track: MusicSourceTrack): string {
     let label = this.resolvedTrackActionLabel(track);
     if (label === '已导入') {
-      return '#213126';
+      return this.theme().successBackground;
     }
     if (label === '导入中') {
-      return '#1E3A4A';
+      return this.theme().accentSoftBackground;
     }
-    return '#5DB8C9';
+    return this.theme().accent;
   }
 
   private importButtonFontColor(track: MusicSourceTrack): string {
     let label = this.resolvedTrackActionLabel(track);
     if (label === '已导入') {
-      return '#9FD3AC';
+      return this.theme().successText;
     }
     if (label === '导入中') {
-      return '#7FB2BB';
+      return this.theme().accent;
     }
-    return '#050505';
+    return this.theme().onAccent;
   }
 
   build() {
@@ -65,18 +137,18 @@ export struct SourceBrowserPanel {
         Row() {
           Text('← ')
             .fontSize(20)
-            .fontColor('#5DB8C9')
+            .fontColor(this.theme().accent)
             .onClick(() => {
               this.onClose();
             })
           Text(this.title)
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#F5F5F5')
+            .fontColor(this.theme().primaryText)
             .layoutWeight(1)
           Text('关闭')
             .fontSize(15)
-            .fontColor('#5DB8C9')
+            .fontColor(this.theme().accent)
             .onClick(() => {
               this.onClose();
             })
@@ -91,20 +163,24 @@ export struct SourceBrowserPanel {
                 Text(sourceDisplayName(item.source))
                   .fontSize(13)
                   .fontWeight(this.activeSearchSource === item.source ? FontWeight.Bold : FontWeight.Medium)
-                  .fontColor(this.activeSearchSource === item.source ? '#050505' : '#AAA')
+                  .fontColor(this.activeSearchSource === item.source ? this.theme().onAccent : this.theme().secondaryText)
                   .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-                  .backgroundColor(this.activeSearchSource === item.source ? '#5DB8C9' : '#1C1C1C')
+                  .backgroundColor(this.activeSearchSource === item.source ? this.theme().accent : this.theme().panelSecondaryBackground)
                   .borderRadius(16)
                   .onClick(() => {
                     this.onSelectSubSource(item.source);
                   })
-              }, (item: MusicSourceQuality) => item.source)
+              }, (item: MusicSourceQuality) => `${item.source}_${this.sourceQualitySnapshot}`)
             }
           }
           .scrollable(ScrollDirection.Horizontal)
           .scrollBar(BarState.Off)
           .width('100%')
           .padding({ left: 24, right: 24, bottom: 10 })
+
+          if (this.activeSubSourceItem()) {
+            this.qualitySelector(this.activeSubSourceItem() as MusicSourceQuality)
+          }
 
           Row({ space: 10 }) {
             TextInput({ placeholder: '搜索歌曲...', text: this.sourceSearchKeyword })
@@ -117,9 +193,9 @@ export struct SourceBrowserPanel {
               .layoutWeight(1)
               .height(40)
               .fontSize(14)
-              .fontColor('#F0F0F0')
-              .placeholderColor('#555')
-              .backgroundColor('#1C1C1C')
+              .fontColor(this.theme().primaryText)
+              .placeholderColor(this.theme().tertiaryText)
+              .backgroundColor(this.theme().inputBackground)
               .borderRadius(12)
               .padding({ left: 14, right: 14 })
 
@@ -127,8 +203,8 @@ export struct SourceBrowserPanel {
               .height(40)
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
-              .backgroundColor('#5DB8C9')
-              .fontColor('#050505')
+              .backgroundColor(this.theme().accent)
+              .fontColor(this.theme().onAccent)
               .borderRadius(12)
               .padding({ left: 16, right: 16 })
               .onClick(() => {
@@ -144,10 +220,10 @@ export struct SourceBrowserPanel {
             LoadingProgress()
               .width(36)
               .height(36)
-              .color('#5DB8C9')
+              .color(this.theme().accent)
             Text('加载中...')
               .fontSize(14)
-              .fontColor('#666')
+              .fontColor(this.theme().secondaryText)
               .margin({ top: 10 })
           }
           .width('100%')
@@ -157,10 +233,10 @@ export struct SourceBrowserPanel {
           Column({ space: 10 }) {
             Text('当前音源暂无可搜索曲库')
               .fontSize(18)
-              .fontColor('#888')
+              .fontColor(this.theme().secondaryText)
             Text('Harmony 版当前支持酷我、酷狗、咪咕')
               .fontSize(13)
-              .fontColor('#555')
+              .fontColor(this.theme().tertiaryText)
           }
           .width('100%')
           .padding({ top: 60 })
@@ -169,10 +245,10 @@ export struct SourceBrowserPanel {
           Column({ space: 10 }) {
             Text('搜索歌曲')
               .fontSize(18)
-              .fontColor('#888')
+              .fontColor(this.theme().secondaryText)
             Text('输入关键词搜索音源中的歌曲')
               .fontSize(13)
-              .fontColor('#555')
+              .fontColor(this.theme().tertiaryText)
           }
           .width('100%')
           .padding({ top: 60 })
@@ -186,24 +262,24 @@ export struct SourceBrowserPanel {
                     Text(track.name)
                       .fontSize(16)
                       .fontWeight(FontWeight.Medium)
-                      .fontColor('#F0F0F0')
+                      .fontColor(this.theme().primaryText)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                     Row({ space: 6 }) {
                       Text(track.singer)
                         .fontSize(13)
-                        .fontColor('#888')
+                        .fontColor(this.theme().secondaryText)
                         .maxLines(1)
                       if (track.album.length > 0) {
                         Text(`· ${track.album}`)
                           .fontSize(13)
-                          .fontColor('#666')
+                          .fontColor(this.theme().secondaryText)
                           .maxLines(1)
                       }
                       if (track.duration > 0) {
                         Text(this.formatDuration(track.duration))
                           .fontSize(12)
-                          .fontColor('#555')
+                          .fontColor(this.theme().tertiaryText)
                       }
                     }
                   }
@@ -233,8 +309,8 @@ export struct SourceBrowserPanel {
                   Button('加载更多')
                     .height(38)
                     .fontSize(14)
-                    .backgroundColor('#1E3A4A')
-                    .fontColor('#5DB8C9')
+                    .backgroundColor(this.theme().accentSoftBackground)
+                    .fontColor(this.theme().accent)
                     .borderRadius(14)
                     .onClick(() => {
                       this.onLoadMore();
@@ -252,7 +328,7 @@ export struct SourceBrowserPanel {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#111111')
+      .backgroundColor(this.theme().panelBackground)
       .borderRadius({ topLeft: 24, topRight: 24 })
     }
     .width('100%')

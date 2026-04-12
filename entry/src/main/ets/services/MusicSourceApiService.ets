@@ -475,6 +475,10 @@ export async function searchSourceTrackPage(keyword: string, searchSource: strin
               albumId = albums[0]['id'] as string || '';
             }
             let copyrightId = item['copyrightId'] as string || item['id'] as string || '';
+            let mgImg = item['img3'] as string || item['img2'] as string || item['img1'] as string || '';
+            if (mgImg.length > 0 && !mgImg.startsWith('http')) {
+              mgImg = `http://d.musicapp.migu.cn${mgImg}`;
+            }
             tracks.push({
               id: copyrightId,
               name: item['name'] as string || '',
@@ -483,7 +487,7 @@ export async function searchSourceTrackPage(keyword: string, searchSource: strin
               albumId: albumId,
               duration: 0,
               interval: '',
-              pic: '',
+              pic: mgImg,
               source: 'mg',
               songmid: copyrightId,
               hash: '',

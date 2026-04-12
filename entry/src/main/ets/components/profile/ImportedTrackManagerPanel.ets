@@ -1,9 +1,11 @@
 import { image } from '@kit.ImageKit';
 
-import { MusicTrack } from '../../models/AppModels';
+import { AppThemeAppearance, MusicTrack } from '../../models/AppModels';
+import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct ImportedTrackManagerPanel {
+  @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop tracks: MusicTrack[] = [];
   @Prop coveredTrackIds: string[] = [];
   @State activeFilter: string = 'all';
@@ -19,6 +21,10 @@ export struct ImportedTrackManagerPanel {
 
   private hasTrackCover(trackId: string): boolean {
     return this.coveredTrackIds.indexOf(trackId) >= 0 && this.coverForTrack(trackId) !== null;
+  }
+
+  private theme() {
+    return appThemePalette(this.themeAppearance);
   }
 
   private trackCover(trackId: string): image.PixelMap {
@@ -123,11 +129,11 @@ export struct ImportedTrackManagerPanel {
   }
 
   private queueActionBackground(track: MusicTrack): string {
-    return track.inPlayQueue !== false ? '#2B2414' : '#16333B';
+    return track.inPlayQueue !== false ? this.theme().warningBackground : this.theme().accentSoftBackground;
   }
 
   private queueActionBorder(track: MusicTrack): string {
-    return track.inPlayQueue !== false ? '#564418' : '#21505B';
+    return track.inPlayQueue !== false ? this.theme().warningText : this.theme().accentSoftBorder;
   }
 
   private trackLocation(track: MusicTrack): string {
@@ -246,11 +252,11 @@ export struct ImportedTrackManagerPanel {
     .width(32)
     .height(32)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(enabled ? backgroundColor : '#161616')
+    .backgroundColor(enabled ? backgroundColor : this.theme().panelSecondaryBackground)
     .borderRadius(16)
     .border({
       width: 1,
-      color: enabled ? borderColor : '#242424'
+      color: enabled ? borderColor : this.theme().divider
     })
     .opacity(enabled ? 1 : 0.75)
     .onClick(() => {
@@ -265,9 +271,9 @@ export struct ImportedTrackManagerPanel {
     Text(`${this.filterLabel(filter)} ${this.filterCount(filter)}`)
       .fontSize(13)
       .fontWeight(this.isFilterActive(filter) ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(this.isFilterActive(filter) ? '#050505' : '#A9A9A9')
+      .fontColor(this.isFilterActive(filter) ? this.theme().onAccent : this.theme().secondaryText)
       .padding({ left: 14, right: 14, top: 8, bottom: 8 })
-      .backgroundColor(this.isFilterActive(filter) ? '#5DB8C9' : '#1A1A1A')
+      .backgroundColor(this.isFilterActive(filter) ? this.theme().accent : this.theme().chipBackground)
       .borderRadius(15)
       .onClick(() => {
         this.activeFilter = filter;
@@ -281,17 +287,17 @@ export struct ImportedTrackManagerPanel {
         Text('✓')
           .fontSize(13)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#050505')
+          .fontColor(this.theme().onAccent)
       }
     }
     .width(24)
     .height(24)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.isTrackSelected(track.id) ? '#5DB8C9' : '#1A1A1A')
+    .backgroundColor(this.isTrackSelected(track.id) ? this.theme().accent : this.theme().chipBackground)
     .borderRadius(12)
     .border({
       width: 1,
-      color: this.isTrackSelected(track.id) ? '#5DB8C9' : '#333333'
+      color: this.isTrackSelected(track.id) ? this.theme().accent : this.theme().divider
     })
   }
 
@@ -302,20 +308,20 @@ export struct ImportedTrackManagerPanel {
           Text('导入音乐管理')
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#F5F5F5')
+            .fontColor(this.theme().primaryText)
             .layoutWeight(1)
 
           Row({ space: 16 }) {
             Text(this.isSelectionMode ? '取消选择' : '批量管理')
               .fontSize(13)
-              .fontColor('#D6B65D')
+              .fontColor(this.theme().warningText)
               .onClick(() => {
                 this.toggleSelectionMode();
               })
 
             Text('关闭')
               .fontSize(14)
-              .fontColor('#5DB8C9')
+              .fontColor(this.theme().accent)
               .onClick(() => {
                 this.onClose();
               })
@@ -336,18 +342,18 @@ export struct ImportedTrackManagerPanel {
           Row() {
             Text(`已选 ${this.selectedTrackIds.length} 首`)
               .fontSize(12)
-              .fontColor('#B4B4B4')
+              .fontColor(this.theme().secondaryText)
             Blank()
             Text(this.selectedVisibleCount() === this.filteredTracks().length && this.filteredTracks().length > 0 ? '取消全选' : '全选当前筛选')
               .fontSize(12)
-              .fontColor('#5DB8C9')
+              .fontColor(this.theme().accent)
               .onClick(() => {
                 this.toggleSelectAllVisible();
               })
             this.iconActionButton(
               $r('app.media.ic_trash'),
-              this.selectedTrackIds.length > 0 ? '#2A1515' : '#1E1515',
-              this.selectedTrackIds.length > 0 ? '#5C2020' : '#302020',
+              this.selectedTrackIds.length > 0 ? this.theme().dangerBackground : this.theme().panelSecondaryBackground,
+              this.selectedTrackIds.length > 0 ? this.theme().dangerText : this.theme().divider,
               this.selectedTrackIds.length > 0,
               0,
               () => {
@@ -366,7 +372,7 @@ export struct ImportedTrackManagerPanel {
                 Text(this.tracks.length === 0 ? '暂无导入音乐' : '当前筛选下没有歌曲')
                   .fontSize(17)
                   .fontWeight(FontWeight.Medium)
-                  .fontColor('#888888')
+                  .fontColor(this.theme().secondaryText)
               }
               .width('100%')
               .padding({ top: 28, bottom: 28 })
@@ -385,12 +391,12 @@ export struct ImportedTrackManagerPanel {
                       Text(track.title)
                         .fontSize(15)
                         .fontWeight(FontWeight.Medium)
-                        .fontColor('#F0F0F0')
+                        .fontColor(this.theme().primaryText)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
                       Text(`${track.artist} · ${this.trackLocation(track)}`)
                         .fontSize(11)
-                        .fontColor('#777777')
+                        .fontColor(this.theme().secondaryText)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
                     }
@@ -401,8 +407,8 @@ export struct ImportedTrackManagerPanel {
                       Row({ space: 8 }) {
                         this.iconActionButton(
                           $r('app.media.ic_chevron_right'),
-                          '#1A1A1A',
-                          '#2B2B2B',
+                          this.theme().panelSecondaryBackground,
+                          this.theme().divider,
                           this.canMoveUp(track.id),
                           -90,
                           () => {
@@ -411,8 +417,8 @@ export struct ImportedTrackManagerPanel {
                         )
                         this.iconActionButton(
                           $r('app.media.ic_chevron_right'),
-                          '#1A1A1A',
-                          '#2B2B2B',
+                          this.theme().panelSecondaryBackground,
+                          this.theme().divider,
                           this.canMoveDown(track.id),
                           90,
                           () => {
@@ -431,8 +437,8 @@ export struct ImportedTrackManagerPanel {
                         )
                         this.iconActionButton(
                           $r('app.media.ic_trash'),
-                          '#2A1515',
-                          '#5C2020',
+                          this.theme().dangerBackground,
+                          this.theme().dangerText,
                           true,
                           0,
                           () => {
@@ -451,14 +457,14 @@ export struct ImportedTrackManagerPanel {
                 }
                 .width('100%')
                 .padding({ left: 20, right: 20, top: 12, bottom: 12 })
-                .backgroundColor(this.isSelectionMode && this.isTrackSelected(track.id) ? '#171F23' : Color.Transparent)
+                .backgroundColor(this.isSelectionMode && this.isTrackSelected(track.id) ? this.theme().accentSoftBackground : Color.Transparent)
                 .borderRadius(14)
 
                 if (index < this.filteredTracks().length - 1) {
                   Row()
                     .width('100%')
                     .height(1)
-                    .backgroundColor('#222222')
+                    .backgroundColor(this.theme().divider)
                     .margin({ left: 20, right: 20 })
                 }
               }, (track: MusicTrack) => track.id)
@@ -476,7 +482,7 @@ export struct ImportedTrackManagerPanel {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#111111')
+      .backgroundColor(this.theme().panelBackground)
       .borderRadius({ topLeft: 24, topRight: 24 })
     }
     .width('100%')

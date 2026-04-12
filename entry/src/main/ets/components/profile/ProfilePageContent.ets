@@ -1,18 +1,36 @@
-import { MusicSourceConfig } from '../../models/AppModels';
+import {
+  PAGE_HEADER_BOTTOM_PADDING,
+  PAGE_HEADER_HEIGHT,
+  PAGE_HEADER_HORIZONTAL_PADDING,
+  PAGE_HEADER_ICON_SIZE,
+  PAGE_HEADER_PRIMARY_FONT_SIZE,
+  PAGE_HEADER_RADIUS,
+  PAGE_HEADER_SECONDARY_FONT_SIZE,
+  PAGE_HEADER_TOP_PADDING
+} from '../../constants/AppConstants';
+import { AppThemeAppearance, MusicSourceConfig } from '../../models/AppModels';
+import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct ProfilePageContent {
+  @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop totalHours: number = 0;
+  @Prop themeModeLabel: string = '浅色';
   @Prop musicSources: MusicSourceConfig[] = [];
   @Prop importedTrackCount: number = 0;
   @Prop playQueueTrackCount: number = 0;
   @Prop bottomInset: number = 0;
   onImportLocal: () => void = () => {};
-  onOpenOnlineDownload: () => void = () => {};
+  onOpenBaiduPanImport: () => void = () => {};
+  onOpenThemeMode: () => void = () => {};
   onOpenImportedTrackManager: () => void = () => {};
   onOpenSourceManager: () => void = () => {};
   onBrowseSource: (source: MusicSourceConfig) => void = (_: MusicSourceConfig) => {};
   onOpenEqualizer: () => void = () => {};
+
+  private theme() {
+    return appThemePalette(this.themeAppearance);
+  }
 
   private importedTrackSubtitle(): string {
     if (this.importedTrackCount === 0) {
@@ -29,10 +47,10 @@ export struct ProfilePageContent {
           Text(title)
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#F5F5F5')
+            .fontColor(this.theme().primaryText)
           Text(subtitle)
             .fontSize(13)
-            .fontColor('#707070')
+            .fontColor(this.theme().secondaryText)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -40,7 +58,8 @@ export struct ProfilePageContent {
         Image($r('app.media.ic_chevron_right'))
           .width(16)
           .height(16)
-          .opacity(0.4)
+          .fillColor(this.theme().tertiaryText)
+          .opacity(0.7)
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 16, bottom: 16 })
@@ -50,7 +69,7 @@ export struct ProfilePageContent {
         Row()
           .width('100%')
           .height(1)
-          .backgroundColor('#222222')
+          .backgroundColor(this.theme().divider)
           .margin({ left: 20, right: 20 })
       }
     }
@@ -58,26 +77,33 @@ export struct ProfilePageContent {
 
   @Builder
   private statsHeader() {
-    Row() {
-      Row({ space: 6 }) {
+    Row({ space: 12 }) {
+      Row({ space: 8 }) {
         Image($r('app.media.ic_clock'))
-          .width(14)
-          .height(14)
-          .fillColor('#5DB8C9')
+          .width(PAGE_HEADER_ICON_SIZE)
+          .height(PAGE_HEADER_ICON_SIZE)
+          .fillColor(this.theme().accent)
 
         Text(`累计听歌 ${this.totalHours} 小时`)
-          .fontSize(12)
-          .fontColor('#8A8A8A')
+          .fontSize(PAGE_HEADER_PRIMARY_FONT_SIZE)
+          .fontColor(this.theme().secondaryText)
+          .fontWeight(FontWeight.Medium)
       }
-
-      Blank()
+      .layoutWeight(1)
 
       Text(`${this.importedTrackCount} 首已导入`)
-        .fontSize(12)
-        .fontColor('#8A8A8A')
+        .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
+        .fontColor(this.theme().secondaryText)
     }
     .width('100%')
-    .height(42)
+    .height(PAGE_HEADER_HEIGHT)
+    .padding({ left: 16, right: 16 })
+    .backgroundColor(this.theme().headerBackground)
+    .borderRadius(PAGE_HEADER_RADIUS)
+    .border({
+      width: 1,
+      color: this.theme().headerBorder
+    })
   }
 
   build() {
@@ -87,22 +113,30 @@ export struct ProfilePageContent {
           this.statsHeader()
         }
         .width('100%')
-        .padding({ left: 16, right: 16, top: 14, bottom: 8 })
+        .padding({
+          left: PAGE_HEADER_HORIZONTAL_PADDING,
+          right: PAGE_HEADER_HORIZONTAL_PADDING,
+          top: PAGE_HEADER_TOP_PADDING,
+          bottom: PAGE_HEADER_BOTTOM_PADDING
+        })
 
         Column({ space: 20 }) {
         Column() {
           this.sectionItem('本地导入设置', '重新选择本地音乐文件', true, () => {
             this.onImportLocal();
           })
-          this.sectionItem('在线下载导入', '输入音频链接并自动加入曲库', true, () => {
-            this.onOpenOnlineDownload();
+          this.sectionItem('百度网盘导入', '浏览百度网盘中的音频文件', true, () => {
+            this.onOpenBaiduPanImport();
+          })
+          this.sectionItem('主题外观', this.themeModeLabel, true, () => {
+            this.onOpenThemeMode();
           })
           this.sectionItem('导入音乐管理', this.importedTrackSubtitle(), false, () => {
             this.onOpenImportedTrackManager();
           })
         }
         .width('100%')
-        .backgroundColor('#171717')
+        .backgroundColor(this.theme().panelBackground)
         .borderRadius(20)
 
         Column({ space: 0 }) {
@@ -110,11 +144,11 @@ export struct ProfilePageContent {
             Text('音源设置')
               .fontSize(17)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#F5F5F5')
+              .fontColor(this.theme().primaryText)
             Blank()
             Text('管理')
               .fontSize(14)
-              .fontColor('#5DB8C9')
+              .fontColor(this.theme().accent)
               .onClick(() => {
                 this.onOpenSourceManager();
               })
@@ -125,7 +159,7 @@ export struct ProfilePageContent {
           if (this.musicSources.length === 0) {
             Text('暂未添加自定义音源，点击管理添加')
               .fontSize(13)
-              .fontColor('#555555')
+              .fontColor(this.theme().tertiaryText)
               .padding({ left: 20, right: 20, bottom: 16 })
               .width('100%')
           } else {
@@ -135,20 +169,20 @@ export struct ProfilePageContent {
                   Text(source.name)
                     .fontSize(15)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor('#E8E8E8')
+                    .fontColor(this.theme().primaryText)
                   Text(`${source.author} · v${source.version}`)
                     .fontSize(12)
-                    .fontColor('#666666')
+                    .fontColor(this.theme().secondaryText)
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
 
                 Text('浏览')
                   .fontSize(13)
-                  .fontColor('#050505')
+                  .fontColor(this.theme().onAccent)
                   .fontWeight(FontWeight.Medium)
                   .padding({ left: 14, right: 14, top: 6, bottom: 6 })
-                  .backgroundColor('#5DB8C9')
+                  .backgroundColor(this.theme().accent)
                   .borderRadius(14)
                   .onClick(() => {
                     this.onBrowseSource(source);
@@ -161,7 +195,7 @@ export struct ProfilePageContent {
                 Row()
                   .width('100%')
                   .height(1)
-                  .backgroundColor('#222222')
+                  .backgroundColor(this.theme().divider)
                   .margin({ left: 20, right: 20 })
               }
             }, (source: MusicSourceConfig) => source.id)
@@ -169,7 +203,7 @@ export struct ProfilePageContent {
           }
         }
         .width('100%')
-        .backgroundColor('#171717')
+        .backgroundColor(this.theme().panelBackground)
         .borderRadius(20)
 
         Column() {
@@ -178,7 +212,7 @@ export struct ProfilePageContent {
           })
         }
         .width('100%')
-        .backgroundColor('#171717')
+        .backgroundColor(this.theme().panelBackground)
         .borderRadius(20)
         }
         .width('100%')

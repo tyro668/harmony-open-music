@@ -5,7 +5,7 @@ import { avSession } from '@kit.AVSessionKit';
 import { WantAgent } from '@ohos.app.ability.wantAgent';
 import wantAgent from '@ohos.app.ability.wantAgent';
 
-import { MusicTrack } from '../models/AppModels';
+import { MusicTrack, PlaybackCollectionSummary } from '../models/AppModels';
 
 export async function createPlaybackWantAgent(
   context: common.UIAbilityContext,
@@ -128,6 +128,34 @@ export function createPlaybackState(
     },
     duration: playbackDurationMs
   };
+}
+
+function queueSubtitle(summary: PlaybackCollectionSummary, activeCollectionId: string): string {
+  let status = summary.id === activeCollectionId ? '当前播放' : '可切换';
+  return `${status} · ${summary.subtitle}`;
+}
+
+export function buildPlaybackCollectionQueueItems(
+  collections: PlaybackCollectionSummary[],
+  activeCollectionId: string
+): avSession.AVQueueItem[] {
+  return collections.map((summary: PlaybackCollectionSummary, index: number) => {
+    let description: avSession.AVMediaDescription = {
+      assetId: summary.id,
+      title: summary.title,
+      subtitle: queueSubtitle(summary, activeCollectionId),
+      description: summary.title
+    };
+    let item: avSession.AVQueueItem = {
+      itemId: index + 1,
+      description: description
+    };
+    return item;
+  });
+}
+
+export function buildPlaybackCollectionQueueTitle(): string {
+  return '选择播放列表';
 }
 
 export async function startAudioBackgroundTask(

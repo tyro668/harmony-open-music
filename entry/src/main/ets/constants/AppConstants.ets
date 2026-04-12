@@ -63,18 +63,39 @@ export const BUILTIN_BOARD_LIST: Record<string, SourceBoardItem[]> = {
 export const AUDIO_FILTERS: Array<string> = ['音乐|.mp3,.flac,.wav,.m4a,.aac,.ogg,.ape,.amr'];
 export const AUDIO_EXTENSIONS: Array<string> = ['.mp3', '.flac', '.wav', '.m4a', '.aac', '.ogg', '.ape', '.amr'];
 export const COLOR_PALETTE: Array<string> = ['#BC5B12', '#157CB7', '#9C2B25', '#7430D8', '#10934B', '#C21869', '#1C54D6'];
-export const LISTENING_SEED_MS: number = 128 * 60 * 60 * 1000;
+export const LISTENING_SEED_MS: number = 0;
 export const ONLINE_DOWNLOAD_MAX_BYTES: number = 64 * 1024 * 1024;
+export const PAGE_HEADER_HEIGHT: number = 48;
+export const PAGE_HEADER_RADIUS: number = 16;
+export const PAGE_HEADER_HORIZONTAL_PADDING: number = 16;
+export const PAGE_HEADER_TOP_PADDING: number = 14;
+export const PAGE_HEADER_BOTTOM_PADDING: number = 8;
+export const PAGE_HEADER_ICON_SIZE: number = 16;
+export const PAGE_HEADER_PRIMARY_FONT_SIZE: number = 13;
+export const PAGE_HEADER_SECONDARY_FONT_SIZE: number = 12;
+export const PAGE_HEADER_BACKGROUND_COLOR: string = '#17191B';
+export const PAGE_HEADER_BORDER_COLOR: string = '#24282B';
+export const APP_DATABASE_NAME: string = 'local_music_player.db';
+export const APP_DATABASE_VERSION: number = 1;
 export const PREFERENCES_FILE_NAME: string = 'local_music_player_state';
 export const PREF_KEY_LOCAL_TRACKS: string = 'local_tracks';
 export const PREF_KEY_RECENT_TRACK_IDS: string = 'recent_track_ids';
 export const PREF_KEY_CURRENT_TRACK_ID: string = 'current_track_id';
 export const PREF_KEY_COLLECTION_MODE: string = 'collection_mode';
+export const PREF_KEY_APP_THEME_MODE: string = 'app_theme_mode';
 export const PREF_KEY_MUSIC_SOURCES: string = 'music_sources';
 export const PREF_KEY_MUSIC_SOURCE_SCRIPT_PREFIX: string = 'music_source_script_';
 export const PREF_KEY_TOTAL_LISTENING_MS: string = 'total_listening_ms';
 export const PREF_KEY_PLAY_MODE: string = 'play_mode';
+export const PREF_KEY_CUSTOM_PLAYLISTS: string = 'custom_playlists';
+export const PREF_KEY_ACTIVE_PLAYBACK_COLLECTION_ID: string = 'active_playback_collection_id';
+export const PREF_KEY_PLAYBACK_DRAWER_SHOW_ALBUM_COLLECTIONS: string = 'playback_drawer_show_album_collections';
+export const PREF_KEY_PLAYBACK_DRAWER_SHOW_ARTIST_COLLECTIONS: string = 'playback_drawer_show_artist_collections';
+export const PREF_KEY_BAIDU_PAN_APP_KEY: string = 'baidu_pan_app_key';
+export const PREF_KEY_BAIDU_PAN_ACCESS_TOKEN: string = 'baidu_pan_access_token';
+export const PREF_KEY_BAIDU_PAN_CURRENT_DIR: string = 'baidu_pan_current_dir';
 export const MAX_RECENT_TRACKS: number = 20;
+export const DEFAULT_PLAYBACK_COLLECTION_ID: string = 'builtin:all';
 export const MUSIC_SOURCE_INFO_LIMITS: Record<string, number> = {
   'name': 24,
   'description': 36,
@@ -98,6 +119,7 @@ export const MINI_PLACEHOLDER_TRACK: MusicTrack = {
   title: '未在播放',
   artist: '导入本地音乐后即可播放',
   album: '',
+  durationMs: 0,
   folder: '',
   sourceUri: '',
   filePath: '',

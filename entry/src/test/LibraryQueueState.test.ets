@@ -19,6 +19,7 @@ function buildTrack(id: string, overrides: TrackOverrides = {}): MusicTrack {
     title: `歌曲-${id}`,
     artist: `歌手-${id}`,
     album: '测试专辑',
+    durationMs: 0,
     folder: '测试目录',
     sourceUri: '',
     filePath: `/tmp/${id}.mp3`,

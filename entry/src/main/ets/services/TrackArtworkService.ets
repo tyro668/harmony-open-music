@@ -15,6 +15,44 @@ function resolveTrackArtworkPath(track: MusicTrack): string {
   return '';
 }
 
+export async function extractTrackDuration(track: MusicTrack): Promise<number> {
+  let playablePath = resolveTrackArtworkPath(track);
+  if (playablePath.length === 0) {
+    return 0;
+  }
+
+  let extractor = await media.createAVMetadataExtractor();
+  let openedFile: fs.File | null = null;
+  try {
+    openedFile = fs.openSync(playablePath, fs.OpenMode.READ_ONLY);
+    let stat = fs.statSync(openedFile.fd);
+    extractor.fdSrc = {
+      fd: openedFile.fd,
+      offset: 0,
+      length: stat.size
+    };
+    let metadata = await extractor.fetchMetadata();
+    let durationText = typeof metadata.duration === 'string' ? metadata.duration : '';
+    let durationMs = parseInt(durationText, 10);
+    return !isNaN(durationMs) && durationMs > 0 ? durationMs : 0;
+  } catch (_) {
+    return 0;
+  } finally {
+    try {
+      await extractor.release();
+    } catch (_) {
+      // ignore extractor cleanup failures
+    }
+    if (openedFile !== null) {
+      try {
+        fs.closeSync(openedFile);
+      } catch (_) {
+        // ignore file cleanup failures
+      }
+    }
+  }
+}
+
 export async function extractTrackArtwork(track: MusicTrack): Promise<image.PixelMap | null> {
   let playablePath = resolveTrackArtworkPath(track);
   if (playablePath.length === 0) {

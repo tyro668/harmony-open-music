@@ -5,20 +5,6 @@ export function totalListeningHours(totalListeningMs: number): number {
   return Math.floor(totalListeningMs / (60 * 60 * 1000));
 }
 
-export function onlineDownloadFailureToast(error: Object): string {
-  let errorText = JSON.stringify(error);
-  if (errorText.indexOf('http status 401') >= 0 || errorText.indexOf('http status 403') >= 0) {
-    return '下载失败，链接可能已过期或需要鉴权';
-  }
-  if (errorText.indexOf('http status 404') >= 0) {
-    return '下载失败，链接已失效或文件不存在';
-  }
-  if (errorText.indexOf('http status 429') >= 0) {
-    return '下载失败，目标站点当前限制访问频率';
-  }
-  return '下载失败，请确认链接可直接访问音频文件';
-}
-
 export function librarySource(localTracks: MusicTrack[]): MusicTrack[] {
   return localTracks.filter((track: MusicTrack) => track.inPlayQueue !== false);
 }

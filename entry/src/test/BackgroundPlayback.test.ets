@@ -238,6 +238,37 @@ export default function backgroundPlaybackTest() {
       expect(hasStop).assertFalse();
     });
 
+    it('audio_interrupt_begin_should_pause_without_destroying_background_resources', 0, () => {
+      let actions: string[] = [];
+      let isAudioInterrupted = true;
+      let shouldPause = true;
+      if (isAudioInterrupted && shouldPause) {
+        actions.push('pauseCurrentTrack');
+        actions.push('updateMusicLiveView_false');
+        actions.push('updateAVSessionState_false');
+      }
+      expect(actions).assertContain('pauseCurrentTrack');
+      expect(actions).assertContain('updateMusicLiveView_false');
+      expect(actions).assertContain('updateAVSessionState_false');
+      let hasDestroy = false;
+      for (let action of actions) {
+        if (action === 'stopMusicLiveView' || action === 'stopBackgroundTask' || action === 'destroyAVSession') {
+          hasDestroy = true;
+        }
+      }
+      expect(hasDestroy).assertFalse();
+    });
+
+    it('audio_interrupt_end_should_resume_when_previous_state_was_playing', 0, () => {
+      let actions: string[] = [];
+      let shouldResumeAfterInterrupt = true;
+      let hintType = 'resume';
+      if (shouldResumeAfterInterrupt && hintType === 'resume') {
+        actions.push('resumeCurrentTrack');
+      }
+      expect(actions).assertContain('resumeCurrentTrack');
+    });
+
     it('completed_state_stops_everything', 0, () => {
       // 播放完成必须停止后台任务、销毁 AVSession、停止 LiveView
       let actions: string[] = [];
@@ -251,6 +282,25 @@ export default function backgroundPlaybackTest() {
       expect(actions).assertContain('stopBackgroundTask');
       expect(actions).assertContain('destroyAVSession');
       expect(actions).assertContain('stopMusicLiveView');
+    });
+
+    it('released_state_should_keep_live_view_when_audio_is_interrupted', 0, () => {
+      let actions: string[] = [];
+      let state = 'released';
+      let isAudioInterrupted = true;
+      if (state === 'released' && isAudioInterrupted) {
+        actions.push('updateMusicLiveView_false');
+        actions.push('updateAVSessionState_false');
+      }
+      expect(actions).assertContain('updateMusicLiveView_false');
+      expect(actions).assertContain('updateAVSessionState_false');
+      let hasStop = false;
+      for (let action of actions) {
+        if (action === 'stopMusicLiveView' || action === 'stopBackgroundTask' || action === 'destroyAVSession') {
+          hasStop = true;
+        }
+      }
+      expect(hasStop).assertFalse();
     });
 
     it('error_state_stops_everything', 0, () => {

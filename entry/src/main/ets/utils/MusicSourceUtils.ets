@@ -8,11 +8,58 @@ import {
 } from '../models/AppModels';
 import { MUSIC_SOURCE_INFO_LIMITS } from '../constants/AppConstants';
 
+const SOURCE_QUALITY_PRIORITY: string[] = ['flac24bit', 'flac', '320k', '128k'];
+
+function normalizeQualityList(qualitys: string[]): string[] {
+  let uniqueQualitys: string[] = [];
+  for (let index = 0; index < qualitys.length; index++) {
+    let quality = qualitys[index];
+    if (uniqueQualitys.indexOf(quality) < 0) {
+      uniqueQualitys.push(quality);
+    }
+  }
+
+  let sortedQualitys: string[] = [];
+  for (let index = 0; index < SOURCE_QUALITY_PRIORITY.length; index++) {
+    let quality = SOURCE_QUALITY_PRIORITY[index];
+    if (uniqueQualitys.indexOf(quality) >= 0) {
+      sortedQualitys.push(quality);
+    }
+  }
+  for (let index = 0; index < uniqueQualitys.length; index++) {
+    let quality = uniqueQualitys[index];
+    if (sortedQualitys.indexOf(quality) < 0) {
+      sortedQualitys.push(quality);
+    }
+  }
+  return sortedQualitys;
+}
+
+export function resolvePreferredSourceQuality(item: MusicSourceQuality): string {
+  let qualitys = normalizeQualityList(Array.isArray(item.qualitys) ? item.qualitys : []);
+  if (qualitys.length === 0) {
+    return '128k';
+  }
+  let preferredQuality = typeof item.preferredQuality === 'string' ? item.preferredQuality : '';
+  if (preferredQuality.length > 0 && qualitys.indexOf(preferredQuality) >= 0) {
+    return preferredQuality;
+  }
+  return qualitys[0];
+}
+
 export function normalizeMusicSourceQuality(item: MusicSourceQuality): MusicSourceQuality {
-  let qualitys = Array.isArray(item.qualitys) ? item.qualitys.filter((quality: string) => typeof quality === 'string' && quality.length > 0) : [];
+  let qualitys = Array.isArray(item.qualitys)
+    ? item.qualitys.filter((quality: string) => typeof quality === 'string' && quality.length > 0)
+    : [];
+  let normalizedQualitys = normalizeQualityList(qualitys);
   return {
     source: typeof item.source === 'string' ? item.source : '',
-    qualitys: qualitys
+    qualitys: normalizedQualitys,
+    preferredQuality: resolvePreferredSourceQuality({
+      source: typeof item.source === 'string' ? item.source : '',
+      qualitys: normalizedQualitys,
+      preferredQuality: item.preferredQuality
+    })
   };
 }
 
@@ -21,9 +68,25 @@ export function defaultMusicSources(): MusicSourceQuality[] {
   let defaultNames: string[] = ['wy', 'kw', 'kg', 'tx', 'mg'];
   for (let index = 0; index < defaultNames.length; index++) {
     let source = defaultNames[index];
-    sources.push({ source: source, qualitys: ['128k', '320k', 'flac'] });
+    sources.push(normalizeMusicSourceQuality({ source: source, qualitys: ['128k', '320k', 'flac'] }));
   }
   return sources;
+}
+
+export function sourceQualityDisplayName(quality: string): string {
+  if (quality === 'flac24bit') {
+    return 'Hi-Res';
+  }
+  if (quality === 'flac') {
+    return 'FLAC';
+  }
+  if (quality === '320k') {
+    return '320K';
+  }
+  if (quality === '128k') {
+    return '128K';
+  }
+  return quality.toUpperCase();
 }
 
 export function normalizeMusicSource(source: PersistedMusicSourceConfig): MusicSourceConfig {

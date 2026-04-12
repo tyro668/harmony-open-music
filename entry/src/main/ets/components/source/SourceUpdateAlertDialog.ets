@@ -1,16 +1,24 @@
+import { AppThemeAppearance } from '../../models/AppModels';
+import { appThemePalette } from '../../utils/ThemeUtils';
+
 @Component
 export struct SourceUpdateAlertDialog {
+  @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop name: string = ''
   @Prop log: string = ''
   @Prop updateUrl: string = ''
   onClose: () => void = () => {}
+
+  private theme() {
+    return appThemePalette(this.themeAppearance);
+  }
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#CC000000')
+        .backgroundColor(this.theme().maskBackground)
         .onClick(() => {
           this.onClose();
         })
@@ -19,12 +27,12 @@ export struct SourceUpdateAlertDialog {
         Text(this.name.length > 0 ? `${this.name} 有新提醒` : '音源更新提醒')
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#F5F5F5')
+          .fontColor(this.theme().primaryText)
           .width('100%')
 
         Text(this.log)
           .fontSize(13)
-          .fontColor('#CACACA')
+          .fontColor(this.theme().secondaryText)
           .lineHeight(20)
           .width('100%')
 
@@ -32,11 +40,11 @@ export struct SourceUpdateAlertDialog {
           Column({ space: 6 }) {
             Text('更新链接')
               .fontSize(12)
-              .fontColor('#777777')
+              .fontColor(this.theme().secondaryText)
               .width('100%')
             Text(this.updateUrl)
               .fontSize(12)
-              .fontColor('#5DB8C9')
+              .fontColor(this.theme().accent)
               .width('100%')
           }
           .alignItems(HorizontalAlign.Start)
@@ -45,10 +53,10 @@ export struct SourceUpdateAlertDialog {
         Row() {
           Text('关闭')
             .fontSize(15)
-            .fontColor('#111111')
+            .fontColor(this.theme().onAccent)
             .fontWeight(FontWeight.Bold)
             .padding({ left: 24, right: 24, top: 10, bottom: 10 })
-            .backgroundColor('#5DB8C9')
+            .backgroundColor(this.theme().accent)
             .borderRadius(14)
             .onClick(() => {
               this.onClose();
@@ -59,9 +67,9 @@ export struct SourceUpdateAlertDialog {
       }
       .width('82%')
       .padding({ left: 20, right: 20, top: 18, bottom: 18 })
-      .backgroundColor('#222222')
+      .backgroundColor(this.theme().panelBackground)
       .borderRadius(20)
-      .border({ width: 1, color: '#333333' })
+      .border({ width: 1, color: this.theme().divider })
     }
     .width('100%')
     .height('100%')

@@ -1,15 +1,18 @@
 import { image } from '@kit.ImageKit';
 
-import { MusicTrack } from '../../models/AppModels';
+import { AppThemeAppearance, MusicTrack } from '../../models/AppModels';
 import { formatDurationMs } from '../../utils/TrackUtils';
+import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct MiniPlayerBar {
+  @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop track: MusicTrack = {
     id: '',
     title: '',
     artist: '',
     album: '',
+    durationMs: 0,
     folder: '',
     sourceUri: '',
     filePath: '',
@@ -43,6 +46,10 @@ export struct MiniPlayerBar {
     return this.coveredTrackIds.indexOf(trackId) >= 0 && this.coverForTrack(trackId) !== null;
   }
 
+  private theme() {
+    return appThemePalette(this.themeAppearance);
+  }
+
   private trackCover(trackId: string): image.PixelMap {
     return this.coverForTrack(trackId) as image.PixelMap;
   }
@@ -53,6 +60,160 @@ export struct MiniPlayerBar {
 
   private durationTimeText(): string {
     return formatDurationMs(this.playbackDurationMs);
+  }
+
+  private discGradientTail(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#17306C' : '#4B6FC8';
+  }
+
+  private placeholderDiscGrooveColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFF1A' : '#FFFFFF88';
+  }
+
+  private placeholderDiscInnerGrooveColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFF10' : '#FFFFFF55';
+  }
+
+  private placeholderDiscFaceColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFF10' : '#F3F8FA';
+  }
+
+  private placeholderDiscTickColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFFB8' : '#42616D';
+  }
+
+  private placeholderDiscMinuteHandColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFFD8' : '#27424D';
+  }
+
+  private placeholderDiscSecondHandColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#79D8EA' : '#1F6F86';
+  }
+
+  private placeholderDiscMarkerColor(): string {
+    return this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFFD4' : '#FFFFFFF2';
+  }
+
+  @Builder
+  private placeholderClockDisc() {
+    Stack({ alignContent: Alignment.Center }) {
+      Row()
+        .width(40)
+        .height(40)
+        .borderRadius(20)
+        .backgroundColor(this.placeholderDiscFaceColor())
+        .border({
+          width: 1,
+          color: this.placeholderDiscGrooveColor()
+        })
+
+      ForEach([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], (tick: number) => {
+        Column() {
+          Row()
+            .width(tick % 3 === 0 ? 2 : 1)
+            .height(tick % 3 === 0 ? 7 : 4)
+            .backgroundColor(this.placeholderDiscTickColor())
+            .borderRadius(1)
+            .opacity(tick % 3 === 0 ? 0.95 : 0.72)
+
+          Blank().layoutWeight(1)
+        }
+        .width(40)
+        .height(40)
+        .padding({ top: 4 })
+        .alignItems(HorizontalAlign.Center)
+        .rotate({
+          angle: tick * 30,
+          x: 0,
+          y: 0,
+          z: 1,
+          centerX: '50%',
+          centerY: '50%'
+        })
+      }, (tick: number) => `clock-tick-${tick}`)
+
+      Column() {
+        Row()
+          .width(2)
+          .height(11)
+          .backgroundColor(this.placeholderDiscMarkerColor())
+          .borderRadius(1)
+          .opacity(0.9)
+        Blank().layoutWeight(1)
+      }
+      .width(2)
+      .height(40)
+      .rotate({
+        angle: 28,
+        x: 0,
+        y: 0,
+        z: 1,
+        centerX: '50%',
+        centerY: '50%'
+      })
+
+      Column() {
+        Row()
+          .width(2)
+          .height(14)
+          .backgroundColor(this.placeholderDiscMinuteHandColor())
+          .borderRadius(1)
+          .opacity(0.92)
+        Blank().layoutWeight(1)
+      }
+      .width(2)
+      .height(40)
+      .rotate({
+        angle: 136,
+        x: 0,
+        y: 0,
+        z: 1,
+        centerX: '50%',
+        centerY: '50%'
+      })
+
+      Column() {
+        Row()
+          .width(1)
+          .height(16)
+          .backgroundColor(this.placeholderDiscSecondHandColor())
+          .borderRadius(1)
+          .opacity(0.96)
+        Blank().layoutWeight(1)
+      }
+      .width(1)
+      .height(40)
+      .rotate({
+        angle: 214,
+        x: 0,
+        y: 0,
+        z: 1,
+        centerX: '50%',
+        centerY: '50%'
+      })
+
+      Row()
+        .width(8)
+        .height(8)
+        .backgroundColor(this.placeholderDiscMarkerColor())
+        .borderRadius(4)
+        .border({
+          width: 1,
+          color: this.placeholderDiscTickColor()
+        })
+
+      Row()
+        .width(28)
+        .height(28)
+        .borderRadius(14)
+        .border({
+          width: 1,
+          color: this.placeholderDiscInnerGrooveColor()
+        })
+        .opacity(0.74)
+    }
+    .width(40)
+    .height(40)
   }
 
   @Builder
@@ -67,7 +228,7 @@ export struct MiniPlayerBar {
           angle: 135,
           colors: [
             [this.track.accentColor, 0],
-            ['#17306C', 1]
+            [this.discGradientTail(), 1]
           ]
         })
 
@@ -84,7 +245,7 @@ export struct MiniPlayerBar {
           .borderRadius(24)
           .border({
             width: 1,
-            color: '#FFFFFF24'
+            color: this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFF24' : '#00000018'
           })
       } else if (this.track.pic.length > 0) {
         Image(this.track.pic)
@@ -99,24 +260,16 @@ export struct MiniPlayerBar {
           .borderRadius(24)
           .border({
             width: 1,
-            color: '#FFFFFF24'
+            color: this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFF24' : '#00000018'
           })
       } else {
-        Row()
-          .width(40)
-          .height(40)
-          .borderRadius(20)
-          .border({
-            width: 1,
-            color: '#FFFFFF16'
-          })
-          .opacity(0.65)
+        this.placeholderClockDisc()
       }
 
       Row()
         .width(12)
         .height(12)
-        .backgroundColor('#121212')
+        .backgroundColor(this.theme().panelBackground)
         .borderRadius(6)
     }
     .width(60)
@@ -141,7 +294,7 @@ export struct MiniPlayerBar {
       Row()
         .width(52)
         .height(52)
-        .backgroundColor(this.isPlaying ? '#4B4A49' : '#434240')
+        .backgroundColor(this.theme().controlPrimaryBackground)
         .borderRadius(26)
         .opacity(this.isPlayButtonTransitioning ? 0.88 : 1)
 
@@ -152,7 +305,7 @@ export struct MiniPlayerBar {
           .borderRadius(26)
           .border({
             width: 1,
-            color: '#5B5A58'
+            color: this.themeAppearance === AppThemeAppearance.Dark ? this.theme().accentSoftBorder : '#FFFFFF22'
           })
           .opacity(0.6)
       }
@@ -161,6 +314,7 @@ export struct MiniPlayerBar {
         Image($r('app.media.ic_pause'))
           .width(20)
           .height(20)
+          .fillColor(this.theme().controlPrimaryForeground)
           .opacity(0.96)
           .transition({ type: TransitionType.Insert, opacity: 0 })
           .transition({ type: TransitionType.Delete, opacity: 0 })
@@ -168,6 +322,7 @@ export struct MiniPlayerBar {
         Image($r('app.media.ic_play'))
           .width(20)
           .height(20)
+          .fillColor(this.theme().controlPrimaryForeground)
           .opacity(0.96)
           .transition({ type: TransitionType.Insert, opacity: 0 })
           .transition({ type: TransitionType.Delete, opacity: 0 })
@@ -192,11 +347,18 @@ export struct MiniPlayerBar {
       Image(icon)
         .width(24)
         .height(24)
+        .fillColor(this.theme().controlSecondaryForeground)
         .opacity(0.88)
     }
     .width(42)
     .height(42)
     .justifyContent(FlexAlign.Center)
+    .backgroundColor(this.theme().controlSecondaryBackground)
+    .borderRadius(21)
+    .border({
+      width: 1,
+      color: this.theme().controlSecondaryBorder
+    })
     .scale({ x: scaleValue, y: scaleValue })
     .animation({
       duration: 140,
@@ -217,26 +379,26 @@ export struct MiniPlayerBar {
           Text(this.track.title)
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#F4F4F4')
+            .fontColor(this.theme().primaryText)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.track.artist)
             .fontSize(14)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#B7B7B7')
+            .fontColor(this.theme().secondaryText)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Row() {
             Text(this.progressTimeText())
               .fontSize(12)
-              .fontColor('#8C8C8C')
+              .fontColor(this.theme().secondaryText)
               .fontWeight(FontWeight.Medium)
             Blank()
             Text(this.durationTimeText())
               .fontSize(12)
-              .fontColor('#6F6F6F')
+              .fontColor(this.theme().tertiaryText)
               .fontWeight(FontWeight.Medium)
           }
           .width('100%')
@@ -269,9 +431,9 @@ export struct MiniPlayerBar {
         .trackBorderRadius(2)
         .selectedBorderRadius(2)
         .blockSize({ width: 14, height: 14 })
-        .trackColor('#444341')
-        .selectedColor('#F1F1F1')
-        .blockColor('#FFFFFF')
+        .trackColor(this.theme().sliderTrack)
+        .selectedColor(this.theme().sliderActiveTrack)
+        .blockColor(this.theme().sliderThumb)
         .enabled(this.track.isImported && this.playbackDurationMs > 0)
         .onChange((value: number, mode: SliderChangeMode) => {
           this.onSeekChange(value, mode);
@@ -280,12 +442,18 @@ export struct MiniPlayerBar {
         .padding({ left: 14, right: 14, bottom: 12 })
     }
     .width('100%')
-    .backgroundColor('#2A292880')
-    .backdropBlur(30)
+    .backgroundColor(this.theme().floatingSurface)
+    .backdropBlur(this.themeAppearance === AppThemeAppearance.Dark ? 30 : 12)
     .borderRadius(28)
     .border({
       width: 1,
-      color: '#3A393760'
+      color: this.theme().floatingSurfaceBorder
+    })
+    .shadow({
+      radius: this.themeAppearance === AppThemeAppearance.Dark ? 12 : 18,
+      color: this.theme().floatingSurfaceShadow,
+      offsetX: 0,
+      offsetY: 8
     })
   }
 }

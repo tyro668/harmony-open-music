@@ -1,15 +1,27 @@
-import { MusicSourceQuality } from '../../models/AppModels';
-import { sourceDisplayName } from '../../utils/MusicSourceUtils';
+import { AppThemeAppearance, MusicSourceQuality } from '../../models/AppModels';
+import {
+  resolvePreferredSourceQuality,
+  sourceDisplayName,
+  sourceQualityDisplayName
+} from '../../utils/MusicSourceUtils';
+import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct PlatformSelectorDrawer {
+  @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @Prop subSources: MusicSourceQuality[] = [];
   @Prop activeSearchSource: string = '';
+  @Prop qualitySnapshot: string = '';
   onClose: () => void = () => {};
   onSelectSubSource: (sourceCode: string) => void = (_: string) => {};
+  onSelectQuality: (sourceCode: string, quality: string) => void = (_: string, __: string) => {};
 
   private isActive(sourceCode: string): boolean {
     return this.activeSearchSource === sourceCode;
+  }
+
+  private theme() {
+    return appThemePalette(this.themeAppearance);
   }
 
   private accentColor(sourceCode: string): string {
@@ -73,6 +85,36 @@ export struct PlatformSelectorDrawer {
     return sourceCode.toUpperCase();
   }
 
+  private preferredQuality(item: MusicSourceQuality): string {
+    let snapshot = this.qualitySnapshot;
+    if (snapshot.length < 0) {
+      return '128k';
+    }
+    return resolvePreferredSourceQuality(item);
+  }
+
+  private isQualitySelected(item: MusicSourceQuality, quality: string): boolean {
+    return this.preferredQuality(item) === quality;
+  }
+
+  @Builder
+  private qualityChip(item: MusicSourceQuality, quality: string) {
+    Text(sourceQualityDisplayName(quality))
+      .fontSize(11)
+      .fontWeight(this.isQualitySelected(item, quality) ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.isQualitySelected(item, quality) ? '#0B0F10' : this.theme().secondaryText)
+      .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+      .backgroundColor(this.isQualitySelected(item, quality) ? this.accentColor(item.source) : this.theme().panelSecondaryBackground)
+      .borderRadius(12)
+      .border({
+        width: 1,
+        color: this.isQualitySelected(item, quality) ? this.accentColor(item.source) : this.theme().divider
+      })
+      .onClick(() => {
+        this.onSelectQuality(item.source, quality);
+      })
+  }
+
   @Builder
   private platformItem(item: MusicSourceQuality) {
     Column({ space: 8 }) {
@@ -82,13 +124,15 @@ export struct PlatformSelectorDrawer {
           .fontWeight(FontWeight.Bold)
           .fontColor(this.isActive(item.source) ? '#FFFFFF' : this.accentColor(item.source))
           .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .backgroundColor(this.isActive(item.source) ? '#FFFFFF1A' : '#101010')
+          .backgroundColor(this.isActive(item.source)
+            ? (this.themeAppearance === AppThemeAppearance.Dark ? '#FFFFFF1A' : '#FFFFFF66')
+            : this.theme().panelSecondaryBackground)
           .borderRadius(10)
 
         Text(sourceDisplayName(item.source))
           .fontSize(16)
           .fontWeight(this.isActive(item.source) ? FontWeight.Bold : FontWeight.Medium)
-          .fontColor(this.isActive(item.source) ? '#F7F9FA' : '#D2D2D2')
+          .fontColor(this.isActive(item.source) ? this.theme().primaryText : this.theme().primaryText)
           .layoutWeight(1)
           .maxLines(1)
 
@@ -101,26 +145,37 @@ export struct PlatformSelectorDrawer {
           Image($r('app.media.ic_chevron_right'))
             .width(14)
             .height(14)
-            .fillColor('#6E6E6E')
+            .fillColor(this.theme().secondaryText)
         }
       }
       .width('100%')
+      .onClick(() => {
+        this.onSelectSubSource(item.source);
+      })
 
-      Text(`${item.qualitys.length} 种音质`)
+      Text(`默认 ${sourceQualityDisplayName(this.preferredQuality(item))} · ${item.qualitys.length} 种音质`)
         .fontSize(12)
-        .fontColor(this.isActive(item.source) ? '#C7D6DB' : '#6D6D6D')
+        .fontColor(this.isActive(item.source) ? this.theme().secondaryText : this.theme().secondaryText)
+
+      Scroll() {
+        Row({ space: 8 }) {
+          ForEach(item.qualitys, (quality: string) => {
+            this.qualityChip(item, quality)
+          }, (quality: string) => `${item.source}_${quality}`)
+        }
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .width('100%')
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
     .padding({ left: 18, right: 18, top: 14, bottom: 14 })
-    .backgroundColor(this.isActive(item.source) ? this.tintColor(item.source) : '#161616')
+    .backgroundColor(this.isActive(item.source) ? this.tintColor(item.source) : this.theme().panelSecondaryBackground)
     .borderRadius(20)
-      .border({
+    .border({
       width: 1,
-      color: this.isActive(item.source) ? this.itemBorderColor(item.source) : '#242424'
-    })
-    .onClick(() => {
-      this.onSelectSubSource(item.source);
+      color: this.isActive(item.source) ? this.itemBorderColor(item.source) : this.theme().divider
     })
   }
 
@@ -129,7 +184,7 @@ export struct PlatformSelectorDrawer {
       Row()
         .width('100%')
         .height('100%')
-        .backgroundColor('#00000088')
+        .backgroundColor(this.theme().maskBackground)
         .transition(TransitionEffect.opacity(0))
         .onClick(() => {
           this.onClose();
@@ -142,18 +197,18 @@ export struct PlatformSelectorDrawer {
               Text('音乐平台')
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#F4F7F8')
+                .fontColor(this.theme().primaryText)
 
               Text('选择当前音源下的音乐平台')
                 .fontSize(13)
-                .fontColor('#6C7378')
+                .fontColor(this.theme().secondaryText)
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
 
             Text('关闭')
               .fontSize(15)
-              .fontColor('#5DB8C9')
+              .fontColor(this.theme().accent)
               .onClick(() => {
                 this.onClose();
               })
@@ -165,7 +220,7 @@ export struct PlatformSelectorDrawer {
             Column({ space: 12 }) {
               ForEach(this.subSources, (item: MusicSourceQuality) => {
                 this.platformItem(item)
-              }, (item: MusicSourceQuality) => item.source)
+              }, (item: MusicSourceQuality) => `${item.source}_${this.qualitySnapshot}`)
             }
             .width('100%')
             .padding({ left: 22, right: 22, bottom: 28 })
@@ -177,11 +232,11 @@ export struct PlatformSelectorDrawer {
         }
         .width('74%')
         .height('100%')
-        .backgroundColor('#101214F2')
+        .backgroundColor(this.theme().frostedBackground)
         .backdropBlur(18)
         .border({
           width: 1,
-          color: '#242A2D'
+          color: this.theme().divider
         })
         .borderRadius({ topRight: 30, bottomRight: 30 })
         .transition(
