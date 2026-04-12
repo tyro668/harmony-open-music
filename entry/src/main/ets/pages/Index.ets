@@ -1138,7 +1138,7 @@ struct Index {
       }
       this.liveViewSequence = 1;
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      let clickAction = await createPlaybackWantAgent(context, 'com.opensource.metis.music', 'EntryAbility');
+      let clickAction = await createPlaybackWantAgent(context, 'com.metis.open.music', 'EntryAbility');
       this.liveView = createPlaybackLiveView(track, clickAction, this.liveViewSequence);
       await liveViewManager.startLiveView(this.liveView);
       console.info('startMusicLiveView succeeded');
@@ -1182,7 +1182,7 @@ struct Index {
     try {
       await this.destroyAVSession();
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      let clickAction = await createPlaybackWantAgent(context, 'com.opensource.metis.music', 'EntryAbility');
+      let clickAction = await createPlaybackWantAgent(context, 'com.metis.open.music', 'EntryAbility');
       let session = await avSession.createAVSession(context, 'MusicPlayer', 'audio');
       this.session = session;
       await session.setAVMetadata(createSessionMetadata(track));
@@ -1246,7 +1246,7 @@ struct Index {
     }
     try {
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      let clickAction = await createPlaybackWantAgent(context, 'com.opensource.metis.music', 'EntryAbility');
+      let clickAction = await createPlaybackWantAgent(context, 'com.metis.open.music', 'EntryAbility');
       await startAudioBackgroundTask(context, clickAction);
       this.isBackgroundTaskRunning = true;
       console.info('startBackgroundTask succeeded');

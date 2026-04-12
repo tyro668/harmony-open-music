@@ -7,11 +7,11 @@
         "material": {
           "certpath": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BD1DDA70CA9E6851AE65ABAD9CA66F4DB5E86AF84994398CC763BB81CBC5993D67742CBBFA5D57E",
+          "keyPassword": "0000001B40CAEC2285A1C9AFCC30435FB290479885AFC2BC3DE7BBAC34899C27355FC2BF2A2695F6DA026C",
           "profile": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.p12",
-          "storePassword": "0000001B2BAD33AC830F20DF2A230C2C0334E8F46BB8BD82576C69C3D13BA072B5D9F8D26C75F72CBA121B"
+          "storePassword": "0000001B0A1F765D274B696B6EEA4448C4E084F16CB72DEB8CEA68343FBC5FA588DD841DF2BF1A153E5214"
         }
       }
     ],

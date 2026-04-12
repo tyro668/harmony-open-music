@@ -59,11 +59,11 @@ export default function backgroundPlaybackTest() {
 
     it('startBackgroundRunning_needs_wantAgent', 0, () => {
       // wantAgent 信息中 bundleName 和 abilityName 必须正确
-      let bundleName = 'com.opensource.metis.music';
+      let bundleName = 'com.metis.open.music';
       let abilityName = 'EntryAbility';
       expect(bundleName.length).assertLarger(0);
       expect(abilityName.length).assertLarger(0);
-      expect(bundleName).assertEqual('com.opensource.metis.music');
+      expect(bundleName).assertEqual('com.metis.open.music');
       expect(abilityName).assertEqual('EntryAbility');
     });
   });
@@ -109,7 +109,7 @@ export default function backgroundPlaybackTest() {
 
     it('liveView_icon_must_be_rawfile_filename_only', 0, () => {
       // icon 必须是 rawfile 目录下的文件名，不能含路径前缀
-      let icon = 'startIcon.png';
+      let icon = 'startIcon_app.png';
       expect(icon.includes('/')).assertFalse();
       expect(icon.includes('entry')).assertFalse();
       expect(icon.includes('resources')).assertFalse();
@@ -159,10 +159,10 @@ export default function backgroundPlaybackTest() {
   describe('LiveViewRawFileIcon', () => {
 
     it('startIcon_exists_in_rawfile_directory', 0, () => {
-      // rawfile 目录下必须存在 startIcon.png 图标文件
+      // rawfile 目录下必须存在 startIcon_app.png 图标文件
       // 此测试验证构建产物中包含了必要的资源
-      let iconFileName = 'startIcon.png';
-      expect(iconFileName).assertEqual('startIcon.png');
+      let iconFileName = 'startIcon_app.png';
+      expect(iconFileName).assertEqual('startIcon_app.png');
     });
   });
 
