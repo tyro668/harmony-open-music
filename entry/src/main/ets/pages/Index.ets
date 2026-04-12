@@ -153,11 +153,13 @@ import {
   applyStoppedLiveViewUpdate,
   buildPlaybackCollectionQueueItems,
   buildPlaybackCollectionQueueTitle,
+  buildTrackQueueItems,
   createPlaybackLiveView,
   createPlaybackState,
   createPlaybackWantAgent,
   createSessionMetadata,
   loopModeToPlayMode,
+  playModeToLoopMode,
   resolveLiveViewIconFileName,
   startAudioBackgroundTask,
   stopAudioBackgroundTask
@@ -168,6 +170,8 @@ import {
   extractTrackLyrics,
   releaseTrackArtwork as releaseExtractedTrackArtwork
 } from '../services/TrackArtworkService';
+import { CarPlayerBar } from '../components/car/CarPlayerBar';
+import { CarTrackList } from '../components/car/CarTrackList';
 
 class SourceImportTask {
   key: string;
@@ -189,6 +193,7 @@ const LYRIC_REPAIR_STRONG_MATCH_SCORE: number = 190;
 @Component
 struct Index {
   private readonly pageBottomInset: number = 188;
+  @StorageProp('isCarMode') isCarMode: boolean = false;
   @State appThemeMode: AppThemeMode = AppThemeMode.Light;
   @State themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
   @State activeMainTab: MainTab = MainTab.Home;
@@ -326,6 +331,7 @@ struct Index {
     }
     this.hasInitializedState = true;
     void this.initializeAppState();
+    void this.ensureIdleAVSession();
   }
 
   aboutToDisappear(): void {
@@ -333,6 +339,68 @@ struct Index {
   }
 
   build() {
+    if (this.isCarMode) {
+      this.carLayout()
+    } else {
+      this.phoneLayout()
+    }
+  }
+
+  @Builder
+  private carLayout() {
+    Column() {
+      // 上半部分：歌曲列表
+      CarTrackList({
+        tracks: this.playQueueTracks(),
+        currentTrackId: this.currentTrackId,
+        coveredTrackIds: this.trackArtworkIds,
+        title: this.activePlaybackCollectionTitle(),
+        onTrackTap: (track: MusicTrack) => {
+          void this.startTrackPlayback(track);
+        },
+        coverForTrack: (trackId: string) => this.trackArtworkForTrack(trackId)
+      })
+
+      // 下半部分：播放控制栏
+      CarPlayerBar({
+        track: selectCurrentTrack(this.localTracks, this.currentTrackId),
+        isPlaying: this.isPlaying,
+        playbackProgressMs: this.displayedPlaybackProgressMs(),
+        playbackDurationMs: this.playbackDurationMs,
+        playMode: this.playMode,
+        coveredTrackIds: this.trackArtworkIds,
+        onPlayPause: () => {
+          void this.handleMiniPlayPause();
+        },
+        onPrevious: () => {
+          void this.playPreviousTrack();
+        },
+        onNext: () => {
+          void this.playNextTrack();
+        },
+        onSeekChange: (value: number, mode: SliderChangeMode) => {
+          this.handleMiniSeekChange(value, mode);
+        },
+        onSelectPlayMode: () => {
+          if (this.playMode === PlayMode.Sequential) {
+            this.playMode = PlayMode.Shuffle;
+          } else if (this.playMode === PlayMode.Shuffle) {
+            this.playMode = PlayMode.Loop;
+          } else {
+            this.playMode = PlayMode.Sequential;
+          }
+          void this.updateAVSessionState(this.isPlaying);
+        },
+        coverForTrack: (trackId: string) => this.trackArtworkForTrack(trackId)
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(this.theme().appBackground)
+  }
+
+  @Builder
+  private phoneLayout() {
     Stack({ alignContent: Alignment.Bottom }) {
       Column() {
         this.pageContent()
@@ -1093,6 +1161,7 @@ struct Index {
     this.syncCurrentTrackSelection(queueTracks[0].id);
     this.schedulePersistState();
     void this.refreshAVSessionQueue();
+    void this.refreshAVSessionTrackQueue(queueTracks);
 
     let shouldKeepCurrentTrack = previousCollectionId === collectionId &&
       this.loadedTrackId.length > 0 &&
@@ -1106,6 +1175,17 @@ struct Index {
       return;
     }
     await this.startTrackPlayback(queueTracks[0]);
+  }
+
+  private async refreshAVSessionTrackQueue(tracks: MusicTrack[]): Promise<void> {
+    if (!this.session) {
+      return;
+    }
+    try {
+      await this.session.setAVQueueItems(buildTrackQueueItems(tracks));
+    } catch (error) {
+      console.error(`refresh AVSession track queue failed: ${JSON.stringify(error)}`);
+    }
   }
 
   private bindAVSessionAssetSelection(session: avSession.AVSession): void {
@@ -1383,6 +1463,9 @@ struct Index {
         this.playMode = loopModeToPlayMode(mode);
         void this.updateAVSessionState(this.isPlaying);
       });
+      session.on('stop', () => {
+        void this.pauseCurrentTrack();
+      });
       session.on('toggleFavorite', (assetId: string) => {
         this.toggleFavorite(assetId);
       });
@@ -1577,6 +1660,69 @@ struct Index {
       await this.session.setAVMetadata(this.buildAVSessionMetadata(track, durationMs, navIds[0], navIds[1]));
     } catch (error) {
       console.error(`updateAVSessionCoverArt failed: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private async ensureIdleAVSession(): Promise<void> {
+    if (this.session) {
+      return;
+    }
+    try {
+      let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
+      let session = await avSession.createAVSession(context, 'MusicPlayer', 'audio');
+      this.session = session;
+      await session.setAVMetadata({
+        assetId: 'idle',
+        title: '开心动听',
+        artist: '等待播放'
+      });
+      await session.setLaunchAbility(clickAction);
+      await this.refreshAVSessionQueue();
+
+      session.on('play', () => {
+        void this.resumeCurrentTrack();
+      });
+      session.on('pause', () => {
+        void this.pauseCurrentTrack();
+      });
+      session.on('playNext', () => {
+        void this.playNextTrack();
+      });
+      session.on('playPrevious', () => {
+        void this.playPreviousTrack();
+      });
+      session.on('seek', (time: number) => {
+        void this.seekCurrentTrack(time);
+      });
+      session.on('fastForward', () => {
+        void this.seekCurrentTrack(this.playbackProgressMs + 15000);
+      });
+      session.on('rewind', () => {
+        void this.seekCurrentTrack(Math.max(0, this.playbackProgressMs - 15000));
+      });
+      session.on('setLoopMode', (mode: avSession.LoopMode) => {
+        this.playMode = loopModeToPlayMode(mode);
+        void this.updateAVSessionState(this.isPlaying);
+      });
+      session.on('stop', () => {
+        void this.pauseCurrentTrack();
+      });
+      session.on('toggleFavorite', (assetId: string) => {
+        this.toggleFavorite(assetId);
+      });
+      this.bindAVSessionAssetSelection(session);
+
+      let idleState: avSession.AVPlaybackState = {
+        state: avSession.PlaybackState.PLAYBACK_STATE_INITIAL,
+        isFavorite: false,
+        loopMode: playModeToLoopMode(this.playMode)
+      };
+      await session.setAVPlaybackState(idleState);
+      await session.activate();
+      console.info('ensureIdleAVSession succeeded');
+    } catch (error) {
+      console.error(`ensureIdleAVSession failed: ${JSON.stringify(error)}`);
     }
   }
 

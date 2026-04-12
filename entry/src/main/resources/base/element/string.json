@@ -11,6 +11,14 @@
     {
       "name": "EntryAbility_label",
       "value": "开心动听"
+    },
+    {
+      "name": "bluetooth_reason",
+      "value": "用于通过HiCar/CarLife与车机建立蓝牙连接，实现音乐投屏和媒体控制"
+    },
+    {
+      "name": "datasync_reason",
+      "value": "用于HiCar/CarLife车机投屏时同步应用数据，实现跨设备媒体控制"
     }
   ]
 }

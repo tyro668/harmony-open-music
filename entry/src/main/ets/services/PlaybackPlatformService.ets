@@ -319,6 +319,22 @@ export function buildPlaybackCollectionQueueTitle(): string {
   return '选择播放列表';
 }
 
+export function buildTrackQueueItems(tracks: MusicTrack[]): avSession.AVQueueItem[] {
+  return tracks.map((track: MusicTrack, index: number) => {
+    let description: avSession.AVMediaDescription = {
+      assetId: track.id,
+      title: track.title,
+      subtitle: track.artist,
+      description: track.album
+    };
+    let item: avSession.AVQueueItem = {
+      itemId: index + 1,
+      description: description
+    };
+    return item;
+  });
+}
+
 export async function startAudioBackgroundTask(
   context: common.UIAbilityContext,
   clickAction: WantAgent

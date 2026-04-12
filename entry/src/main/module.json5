@@ -20,6 +20,26 @@
       },
       {
         "name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
+      },
+      {
+        "name": "ohos.permission.ACCESS_BLUETOOTH",
+        "reason": "$string:bluetooth_reason",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
+        "reason": "$string:datasync_reason",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "inuse"
+        }
       }
     ],
     "abilities": [
@@ -32,8 +52,23 @@
         "startWindowIcon": "$media:startIcon_app",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
+        "continuable": true,
         "backgroundModes": [
           "audioPlayback"
+        ],
+        "metadata": [
+          {
+            "name": "ohos.capability.hicar",
+            "value": "true"
+          },
+          {
+            "name": "ohos.capability.carlife",
+            "value": "true"
+          },
+          {
+            "name": "ohos.extension.car",
+            "value": "true"
+          }
         ],
         "skills": [
           {
@@ -42,6 +77,22 @@
             ],
             "actions": [
               "ohos.want.action.home"
+            ]
+          },
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "ohos.want.action.view"
+            ]
+          },
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "ohos.want.action.car"
             ]
           }
         ]

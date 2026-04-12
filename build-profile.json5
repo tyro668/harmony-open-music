@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001B40CAEC2285A1C9AFCC30435FB290479885AFC2BC3DE7BBAC34899C27355FC2BF2A2695F6DA026C",
-          "profile": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.p7b",
+          "certpath": "/Users/richie/Documents/hw_cert/harmony_release.cer",
+          "keyAlias": "harmony_release",
+          "keyPassword": "0000001DBC071FAD7B9507C32B52FFBC022A005326A9E95ACB5FD2BFBB8A75708BBB8BA30612440B5D9D9CC258",
+          "profile": "/Users/richie/Documents/hw_cert/metis.musicRelease.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/richie/.ohos/config/default_harmony-music_7_i6q9Ams3Q50CGoJ-nWJrabs5Ver_G_4sG5CJ5hqtI=.p12",
-          "storePassword": "0000001B0A1F765D274B696B6EEA4448C4E084F16CB72DEB8CEA68343FBC5FA588DD841DF2BF1A153E5214"
+          "storeFile": "/Users/richie/Documents/hw_cert/harmony_release.p12",
+          "storePassword": "0000001DBC071FAD7B9507C32B52FFBC022A005326A9E95ACB5FD2BFBB8A75708BBB8BA30612440B5D9D9CC258"
         }
       }
     ],
