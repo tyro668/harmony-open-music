@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Iterable
 
@@ -9,9 +10,12 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 ENTRY_MEDIA_DIR = ROOT / "entry" / "src" / "main" / "resources" / "base" / "media"
 APP_SCOPE_MEDIA_DIR = ROOT / "AppScope" / "resources" / "base" / "media"
+RAWFILE_DIR = ROOT / "entry" / "src" / "main" / "resources" / "rawfile"
 
 MASTER_SIZE = 1024
 START_ICON_SIZE = 512
+LIVE_VIEW_ICON_SIZE = 144
+LIVE_VIEW_ICON_FRAME_COUNT = 8
 
 
 def rgba(hex_color: str, alpha: int = 255) -> tuple[int, int, int, int]:
@@ -120,6 +124,13 @@ def ring_mask(size: int, outer_box: tuple[int, int, int, int], inner_box: tuple[
     return mask
 
 
+def circle_mask(size: int, padding: int) -> Image.Image:
+    mask = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((padding, padding, size - padding, size - padding), fill=255)
+    return mask
+
+
 def draw_note_glyph(image: Image.Image) -> None:
     draw = ImageDraw.Draw(image)
     stem = (548, 290, 610, 635)
@@ -181,6 +192,142 @@ def create_foreground(size: int) -> Image.Image:
     return foreground
 
 
+def draw_scaled_note(image: Image.Image, size: int) -> None:
+    draw = ImageDraw.Draw(image)
+    stem = (
+        int(size * 0.52),
+        int(size * 0.22),
+        int(size * 0.62),
+        int(size * 0.70)
+    )
+    draw.rounded_rectangle(stem, radius=int(size * 0.045), fill=rgba("#13293A", 255))
+
+    beam = [
+        (int(size * 0.57), int(size * 0.27)),
+        (int(size * 0.82), int(size * 0.19)),
+        (int(size * 0.86), int(size * 0.29)),
+        (int(size * 0.60), int(size * 0.38)),
+    ]
+    draw.polygon(beam, fill=rgba("#6DE7FF", 255))
+
+    shadow_beam = [
+        (int(size * 0.56), int(size * 0.31)),
+        (int(size * 0.80), int(size * 0.23)),
+        (int(size * 0.83), int(size * 0.29)),
+        (int(size * 0.58), int(size * 0.37)),
+    ]
+    draw.polygon(shadow_beam, fill=rgba("#1C4862", 154))
+
+    left_head = (
+        int(size * 0.34),
+        int(size * 0.56),
+        int(size * 0.60),
+        int(size * 0.82)
+    )
+    right_head = (
+        int(size * 0.61),
+        int(size * 0.47),
+        int(size * 0.82),
+        int(size * 0.68)
+    )
+    draw.ellipse(left_head, fill=rgba("#13293A", 255))
+    draw.ellipse(right_head, fill=rgba("#0F2131", 238))
+
+    draw.ellipse(
+        (int(size * 0.39), int(size * 0.64), int(size * 0.45), int(size * 0.70)),
+        fill=rgba("#7DEAFF", 236)
+    )
+    draw.rounded_rectangle(
+        (int(size * 0.64), int(size * 0.55), int(size * 0.73), int(size * 0.60)),
+        radius=int(size * 0.022),
+        fill=rgba("#B4F4FF", 210)
+    )
+
+
+def create_live_view_icon_frame(size: int, angle_deg: float) -> Image.Image:
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+
+    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow)
+    shadow_draw.ellipse((16, 18, size - 16, size - 10), fill=rgba("#020812", 68))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=8))
+    canvas = Image.alpha_composite(canvas, shadow)
+
+    group = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    disc_padding = 12
+    disc_size = size - disc_padding * 2
+    disc_fill = diagonal_gradient(
+        disc_size,
+        [
+            (0.0, rgba("#16415F")),
+            (0.56, rgba("#1A6C82")),
+            (1.0, rgba("#0A1D2D")),
+        ],
+    )
+    for layer in [
+        radial_glow(disc_size, (0.26, 0.18), 0.34, rgba("#8AF2FF", 102)),
+        radial_glow(disc_size, (0.72, 0.76), 0.28, rgba("#071521", 122)),
+    ]:
+        disc_fill = Image.alpha_composite(disc_fill, layer)
+
+    mask = circle_mask(disc_size, 0)
+    group.paste(disc_fill, (disc_padding, disc_padding), mask)
+
+    draw = ImageDraw.Draw(group)
+    draw.ellipse((disc_padding, disc_padding, size - disc_padding, size - disc_padding), outline=rgba("#F6FBFD", 236), width=4)
+    draw.ellipse((26, 26, size - 26, size - 26), outline=rgba("#BCEFFF", 42), width=2)
+    draw.ellipse((40, 40, size - 40, size - 40), fill=rgba("#143448", 238))
+    draw.ellipse((50, 50, size - 50, size - 50), outline=rgba("#73E2F8", 80), width=2)
+    draw.ellipse((64, 64, size - 64, size - 64), fill=rgba("#F6FBFD", 230))
+
+    groove_box = (int(size * 0.17), int(size * 0.17), int(size * 0.83), int(size * 0.83))
+    draw.arc(groove_box, start=204, end=336, fill=rgba("#FFFFFF", 34), width=2)
+    groove_box_inner = (int(size * 0.22), int(size * 0.22), int(size * 0.78), int(size * 0.78))
+    draw.arc(groove_box_inner, start=208, end=332, fill=rgba("#FFFFFF", 24), width=2)
+
+    note_layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw_scaled_note(note_layer, size)
+
+    accent_layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    accent_draw = ImageDraw.Draw(accent_layer)
+    accent_draw.rounded_rectangle((89, 25, 104, 33), radius=4, fill=rgba("#C8F7FF", 238))
+    accent_draw.ellipse((29, 32, 39, 42), fill=rgba("#FFFFFF", 190))
+
+    group = Image.alpha_composite(group, note_layer)
+    group = Image.alpha_composite(group, accent_layer)
+
+    center = size / 2
+    ring_radius = size * 0.39
+    marker_layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    marker_draw = ImageDraw.Draw(marker_layer)
+    marker_angle = math.radians(-70)
+    marker_center_x = center + math.cos(marker_angle) * ring_radius
+    marker_center_y = center + math.sin(marker_angle) * ring_radius
+    marker_draw.ellipse(
+        (
+            int(marker_center_x - 6),
+            int(marker_center_y - 6),
+            int(marker_center_x + 6),
+            int(marker_center_y + 6)
+        ),
+        fill=rgba("#7DEAFF", 255)
+    )
+    marker_draw.ellipse(
+        (
+            int(marker_center_x - 2),
+            int(marker_center_y - 2),
+            int(marker_center_x + 2),
+            int(marker_center_y + 2)
+        ),
+        fill=rgba("#F6FBFD", 255)
+    )
+    group = Image.alpha_composite(group, marker_layer)
+
+    rotated_group = group.rotate(angle_deg, resample=Image.Resampling.BICUBIC, center=(size / 2, size / 2))
+    canvas = Image.alpha_composite(canvas, rotated_group)
+    return canvas
+
+
 def composite_icon(background: Image.Image, foreground: Image.Image, size: int) -> Image.Image:
     combined = Image.alpha_composite(background, foreground)
     if combined.size != (size, size):
@@ -199,10 +346,19 @@ def main() -> None:
 
     save_png(background, ENTRY_MEDIA_DIR / "entry_icon_background.png")
     save_png(foreground, ENTRY_MEDIA_DIR / "entry_icon_foreground.png")
+    save_png(start_icon, ENTRY_MEDIA_DIR / "startIcon.png")
     save_png(start_icon, ENTRY_MEDIA_DIR / "startIcon_app.png")
 
     save_png(background, APP_SCOPE_MEDIA_DIR / "app_icon_background.png")
     save_png(foreground, APP_SCOPE_MEDIA_DIR / "app_icon_foreground.png")
+
+    RAWFILE_DIR.mkdir(parents=True, exist_ok=True)
+    for frame_index in range(LIVE_VIEW_ICON_FRAME_COUNT):
+      frame_angle = frame_index * (360 / LIVE_VIEW_ICON_FRAME_COUNT)
+      frame_image = create_live_view_icon_frame(LIVE_VIEW_ICON_SIZE, frame_angle)
+      save_png(frame_image, RAWFILE_DIR / f"startIcon_frame_{frame_index}.png")
+      if frame_index == 0:
+        save_png(frame_image, RAWFILE_DIR / "startIcon.png")
 
 
 if __name__ == "__main__":
