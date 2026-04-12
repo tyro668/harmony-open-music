@@ -11,10 +11,13 @@ import audio from '@ohos.multimedia.audio';
 import { util } from '@kit.ArkTS';
 
 import {
+  APP_BUNDLE_NAME,
+  APP_ENTRY_ABILITY_NAME,
   AUDIO_FILTERS,
   BUILTIN_BOARD_LIST,
   COLOR_PALETTE,
   DEFAULT_PLAYBACK_COLLECTION_ID,
+  LIVE_VIEW_ICON_FRAME_COUNT,
   LISTENING_SEED_MS,
   MAX_RECENT_TRACKS,
   MINI_PLACEHOLDER_TRACK,
@@ -145,6 +148,7 @@ import {
   createPlaybackState,
   createPlaybackWantAgent,
   createSessionMetadata,
+  resolveLiveViewIconFileName,
   startAudioBackgroundTask,
   stopAudioBackgroundTask
 } from '../services/PlaybackPlatformService';
@@ -253,6 +257,7 @@ struct Index {
   private openedFile: fs.File | null = null;
   private openedRawFileName: string = '';
   private appDatabase: relationalStore.RdbStore | null = null;
+  private playbackLaunchToken: number = 0;
   private playerSession: number = 0;
   private loadedTrackId: string = '';
   private autoPlayAfterPrepare: boolean = false;
@@ -267,6 +272,8 @@ struct Index {
   private currentPlaybackRecordStartedAt: number = 0;
   private currentPlaybackRecordMs: number = 0;
   private discRotationTimer: number = -1;
+  private liveViewIconFrameIndex: number = 0;
+  private liveViewIconTimer: number = -1;
   private hasInitializedState: boolean = false;
   private isRestoringState: boolean = false;
   private isPersistingState: boolean = false;
@@ -376,12 +383,13 @@ struct Index {
   private homePage() {
     Stack() {
       HomeQueuePage({
-        tracks: this.playQueueTracks(),
+        tracks: this.filteredPlayQueueTracks(),
         currentTrackId: this.currentTrackId,
         playMode: this.playMode,
         activeCollectionTitle: this.activePlaybackCollectionTitle(),
         showRenameDialog: this.showRenameDialog,
         renameText: this.renameText,
+        searchKeyword: this.searchKeyword,
         bottomInset: this.pageBottomInset,
         coveredTrackIds: this.trackArtworkIds,
         onOpenPlaylistDrawer: () => {
@@ -390,6 +398,12 @@ struct Index {
         onSelectPlayMode: (mode: PlayMode) => {
           this.playMode = mode;
           this.schedulePersistState();
+        },
+        onSearchKeywordChange: (value: string) => {
+          this.searchKeyword = value;
+        },
+        onSearch: () => {
+          // search is handled reactively via searchKeyword filtering
         },
         onTrackTap: (track: MusicTrack) => {
           void this.handleTrackTap(track);
@@ -906,6 +920,18 @@ struct Index {
     return playbackCollectionTracks(this.localTracks, this.customPlaylists, this.activePlaybackCollectionId);
   }
 
+  private filteredPlayQueueTracks(): Array<MusicTrack> {
+    let tracks = this.playQueueTracks();
+    let keyword = this.searchKeyword.trim().toLowerCase();
+    if (keyword.length === 0) {
+      return tracks;
+    }
+    return tracks.filter((track: MusicTrack) => {
+      let target = `${track.title} ${track.artist} ${track.album}`.toLowerCase();
+      return target.indexOf(keyword) >= 0;
+    });
+  }
+
   private selectablePlaybackCollections(): PlaybackCollectionSummary[] {
     return playbackCollectionSelectorSummaries(this.localTracks, this.customPlaylists);
   }
@@ -1137,9 +1163,15 @@ struct Index {
         return;
       }
       this.liveViewSequence = 1;
+      this.liveViewIconFrameIndex = 0;
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      let clickAction = await createPlaybackWantAgent(context, 'com.metis.open.music', 'EntryAbility');
-      this.liveView = createPlaybackLiveView(track, clickAction, this.liveViewSequence);
+      let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
+      this.liveView = createPlaybackLiveView(
+        track,
+        clickAction,
+        this.liveViewSequence,
+        this.currentLiveViewIconFileName(false)
+      );
       await liveViewManager.startLiveView(this.liveView);
       console.info('startMusicLiveView succeeded');
     } catch (error) {
@@ -1155,7 +1187,14 @@ struct Index {
       this.liveViewSequence += 1;
       let track = this.currentTrack();
       let progress = this.playbackDurationMs > 0 ? Math.round(this.playbackProgressMs / this.playbackDurationMs * 100) : 0;
-      this.liveView = applyPlaybackLiveViewUpdate(this.liveView, track, this.liveViewSequence, progress, playing);
+      this.liveView = applyPlaybackLiveViewUpdate(
+        this.liveView,
+        track,
+        this.liveViewSequence,
+        progress,
+        playing,
+        this.currentLiveViewIconFileName(playing)
+      );
       await liveViewManager.updateLiveView(this.liveView);
     } catch (error) {
       console.error(`updateMusicLiveView failed: ${JSON.stringify(error)}`);
@@ -1168,7 +1207,11 @@ struct Index {
     }
     try {
       this.liveViewSequence += 1;
-      this.liveView = applyStoppedLiveViewUpdate(this.liveView, this.liveViewSequence);
+      this.liveView = applyStoppedLiveViewUpdate(
+        this.liveView,
+        this.liveViewSequence,
+        this.currentLiveViewIconFileName(false)
+      );
       await liveViewManager.stopLiveView(this.liveView);
       this.liveView = null;
       console.info('stopMusicLiveView succeeded');
@@ -1182,7 +1225,7 @@ struct Index {
     try {
       await this.destroyAVSession();
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      let clickAction = await createPlaybackWantAgent(context, 'com.metis.open.music', 'EntryAbility');
+      let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
       let session = await avSession.createAVSession(context, 'MusicPlayer', 'audio');
       this.session = session;
       await session.setAVMetadata(createSessionMetadata(track));
@@ -1246,7 +1289,7 @@ struct Index {
     }
     try {
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      let clickAction = await createPlaybackWantAgent(context, 'com.metis.open.music', 'EntryAbility');
+      let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
       await startAudioBackgroundTask(context, clickAction);
       this.isBackgroundTaskRunning = true;
       console.info('startBackgroundTask succeeded');
@@ -1284,6 +1327,33 @@ struct Index {
     }
     clearInterval(this.discRotationTimer);
     this.discRotationTimer = -1;
+  }
+
+  private currentLiveViewIconFileName(playing: boolean): string {
+    return resolveLiveViewIconFileName(playing, this.liveViewIconFrameIndex);
+  }
+
+  private startLiveViewIconRotation(): void {
+    if (this.liveViewIconTimer >= 0) {
+      return;
+    }
+    this.liveViewIconTimer = setInterval(() => {
+      if (!this.isPlaying || !this.liveView) {
+        return;
+      }
+      this.liveViewIconFrameIndex = (this.liveViewIconFrameIndex + 1) % LIVE_VIEW_ICON_FRAME_COUNT;
+      void this.updateMusicLiveView(true);
+    }, 420) as number;
+  }
+
+  private stopLiveViewIconRotation(resetFrame: boolean = false): void {
+    if (this.liveViewIconTimer >= 0) {
+      clearInterval(this.liveViewIconTimer);
+      this.liveViewIconTimer = -1;
+    }
+    if (resetFrame) {
+      this.liveViewIconFrameIndex = 0;
+    }
   }
 
   private showToast(message: string): void {
@@ -1398,13 +1468,14 @@ struct Index {
     this.isRestoringState = true;
     try {
       await this.restorePersistedState();
-      await this.activatePersistedUriPermissions();
     } catch (error) {
       console.error(`initialize app state failed: ${JSON.stringify(error)}`);
     } finally {
       this.isRestoringState = false;
-      this.syncTrackMetadataCaches();
     }
+    // Run URI activation and metadata extraction in parallel, non-blocking
+    void this.activatePersistedUriPermissions();
+    this.syncTrackMetadataCaches();
   }
 
   private async ensureAppDatabaseStore(): Promise<relationalStore.RdbStore> {
@@ -1563,13 +1634,49 @@ struct Index {
     this.refreshAlbumArtworkAliases();
     this.refreshTrackArtworkIds();
 
+    let pendingTracks: MusicTrack[] = [];
     this.localTracks.forEach((track: MusicTrack) => {
       let hasPlayableFile = track.filePath.length > 0 || track.sourceUri.length > 0;
       if (!hasPlayableFile || this.trackArtworkForTrack(track.id) !== null || this.trackArtworkLoadingIds.has(track.id) ||
         this.trackArtworkUnavailableIds.has(track.id)) {
         return;
       }
-      void this.loadTrackArtwork(track);
+      pendingTracks.push(track);
+    });
+
+    // Prioritize current track
+    if (this.currentTrackId.length > 0) {
+      let currentIdx = pendingTracks.findIndex((t: MusicTrack) => t.id === this.currentTrackId);
+      if (currentIdx > 0) {
+        let current = pendingTracks.splice(currentIdx, 1);
+        pendingTracks.unshift(current[0]);
+      }
+    }
+
+    void this.processArtworkBatch(pendingTracks);
+  }
+
+  private async processArtworkBatch(tracks: MusicTrack[]): Promise<void> {
+    const CONCURRENCY = 3;
+    let index = 0;
+    let running = 0;
+
+    let processNext: () => void = () => {};
+    await new Promise<void>((resolve: (value: void) => void) => {
+      processNext = () => {
+        while (running < CONCURRENCY && index < tracks.length) {
+          let track = tracks[index++];
+          running++;
+          this.loadTrackArtwork(track).then(() => {
+            running--;
+            processNext();
+          });
+        }
+        if (running === 0) {
+          resolve();
+        }
+      };
+      processNext();
     });
   }
 
@@ -1588,13 +1695,49 @@ struct Index {
       }
     });
 
+    let pendingTracks: MusicTrack[] = [];
     this.localTracks.forEach((track: MusicTrack) => {
       let hasPlayableFile = track.filePath.length > 0 || track.sourceUri.length > 0;
       if (!hasPlayableFile || track.durationMs > 0 || this.trackDurationLoadingIds.has(track.id) ||
         this.trackDurationUnavailableIds.has(track.id)) {
         return;
       }
-      void this.loadTrackDuration(track);
+      pendingTracks.push(track);
+    });
+
+    // Prioritize current track
+    if (this.currentTrackId.length > 0) {
+      let currentIdx = pendingTracks.findIndex((t: MusicTrack) => t.id === this.currentTrackId);
+      if (currentIdx > 0) {
+        let current = pendingTracks.splice(currentIdx, 1);
+        pendingTracks.unshift(current[0]);
+      }
+    }
+
+    void this.processDurationBatch(pendingTracks);
+  }
+
+  private async processDurationBatch(tracks: MusicTrack[]): Promise<void> {
+    const CONCURRENCY = 3;
+    let index = 0;
+    let running = 0;
+
+    let processNext: () => void = () => {};
+    await new Promise<void>((resolve: (value: void) => void) => {
+      processNext = () => {
+        while (running < CONCURRENCY && index < tracks.length) {
+          let track = tracks[index++];
+          running++;
+          this.loadTrackDuration(track).then(() => {
+            running--;
+            processNext();
+          });
+        }
+        if (running === 0) {
+          resolve();
+        }
+      };
+      processNext();
     });
   }
 
@@ -2913,6 +3056,9 @@ struct Index {
   }
 
   private async startTrackPlayback(track: MusicTrack, resumePositionMs: number = 0, countAsPlay: boolean = true): Promise<void> {
+    let launchToken = ++this.playbackLaunchToken;
+    let sessionId = this.playerSession + 1;
+    this.playerSession = sessionId;
     this.resetAudioInterruptState();
     this.currentTrackId = track.id;
     this.pushRecentTrack(track.id);
@@ -2923,34 +3069,59 @@ struct Index {
     this.lastProgressSnapshotMs = 0;
     this.setMiniPlayButtonState(true, true);
     this.schedulePersistState();
-    void this.startMusicLiveView(track);
-    void this.createAVSession(track);
 
     await this.releasePlayer();
+    if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+      return;
+    }
     this.autoPlayAfterPrepare = true;
     this.pendingStartSeekMs = this.clampSeekMs(resumePositionMs);
     this.setMiniPlayButtonState(true, true);
 
     try {
       let player = await media.createAVPlayer();
-      let sessionId = this.playerSession + 1;
-      this.playerSession = sessionId;
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
       this.player = player;
       this.loadedTrackId = track.id;
       this.registerPlayerCallbacks(player, sessionId);
+      await this.startMusicLiveView(track);
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
+      await this.createAVSession(track);
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
       await this.attachTrackSource(player, track);
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
       if (countAsPlay) {
         this.markTrackPlayed(track.id);
       }
     } catch (error) {
       console.error(`start playback failed: ${JSON.stringify(error)}`);
-      await this.releasePlayer();
-      this.setMiniPlayButtonState(false, false);
-      this.showToast('这首歌曲暂时无法播放，请尝试其他文件');
+      if (this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await this.stopMusicLiveView();
+        await this.destroyAVSession();
+        await this.stopBackgroundTask();
+        await this.releasePlayer();
+        this.setMiniPlayButtonState(false, false);
+        this.showToast('这首歌曲暂时无法播放，请尝试其他文件');
+      }
     }
   }
 
   private async restartTrackPlayerAfterInterrupt(track: MusicTrack, resumePositionMs: number): Promise<void> {
+    let launchToken = ++this.playbackLaunchToken;
+    let sessionId = this.playerSession + 1;
+    this.playerSession = sessionId;
     this.resetAudioInterruptState();
     this.currentTrackId = track.id;
     this.playbackProgressMs = this.clampSeekMs(resumePositionMs);
@@ -2962,24 +3133,52 @@ struct Index {
     this.schedulePersistState();
 
     await this.releasePlayer();
+    if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+      return;
+    }
     this.autoPlayAfterPrepare = true;
     this.pendingStartSeekMs = this.clampSeekMs(resumePositionMs);
     this.setMiniPlayButtonState(true, true);
 
     try {
       let player = await media.createAVPlayer();
-      let sessionId = this.playerSession + 1;
-      this.playerSession = sessionId;
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
       this.player = player;
       this.loadedTrackId = track.id;
       this.registerPlayerCallbacks(player, sessionId);
+      await this.startMusicLiveView(track);
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
+      await this.createAVSession(track);
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
       await this.attachTrackSource(player, track);
+      if (!this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await player.release();
+        return;
+      }
     } catch (error) {
       console.error(`restart interrupt playback failed: ${JSON.stringify(error)}`);
-      await this.releasePlayer();
-      this.setMiniPlayButtonState(false, false);
-      this.showToast('恢复播放失败，请返回应用后重试');
+      if (this.isPlaybackLaunchCurrent(launchToken, sessionId)) {
+        await this.stopMusicLiveView();
+        await this.destroyAVSession();
+        await this.stopBackgroundTask();
+        await this.releasePlayer();
+        this.setMiniPlayButtonState(false, false);
+        this.showToast('恢复播放失败，请返回应用后重试');
+      }
     }
+  }
+
+  private isPlaybackLaunchCurrent(token: number, sessionId: number): boolean {
+    return token === this.playbackLaunchToken && sessionId === this.playerSession;
   }
 
   private async attachTrackSource(player: media.AVPlayer, track: MusicTrack): Promise<void> {
@@ -3083,6 +3282,7 @@ struct Index {
           this.beginPlaybackRecord(this.loadedTrackId);
         }
         this.startDiscRotation();
+        this.startLiveViewIconRotation();
         void this.updateMusicLiveView(true);
         void this.startBackgroundTask();
         void this.updateAVSessionState(true);
@@ -3090,6 +3290,7 @@ struct Index {
         this.isPlaying = false;
         this.setMiniPlayButtonState(false, false);
         this.stopDiscRotation();
+        this.stopLiveViewIconRotation(true);
         void this.flushCurrentPlaybackRecord();
         void this.updateMusicLiveView(false);
         void this.updateAVSessionState(false);
@@ -3097,6 +3298,7 @@ struct Index {
         this.isPlaying = false;
         this.setMiniPlayButtonState(false, false);
         this.stopDiscRotation();
+        this.stopLiveViewIconRotation(true);
         this.playbackProgressMs = this.playbackDurationMs;
         void this.flushCurrentPlaybackRecord();
         void this.stopMusicLiveView();
@@ -3107,6 +3309,7 @@ struct Index {
         this.isPlaying = false;
         this.setMiniPlayButtonState(false, false);
         this.stopDiscRotation();
+        this.stopLiveViewIconRotation(true);
         void this.flushCurrentPlaybackRecord();
         if (this.isAudioInterrupted || this.shouldResumeAfterInterrupt) {
           this.playerReleasedDuringInterrupt = true;
@@ -3121,6 +3324,7 @@ struct Index {
         this.isPlaying = false;
         this.setMiniPlayButtonState(false, false);
         this.stopDiscRotation();
+        this.stopLiveViewIconRotation(true);
         void this.flushCurrentPlaybackRecord();
         if (this.isAudioInterrupted || this.shouldResumeAfterInterrupt) {
           this.playerReleasedDuringInterrupt = true;
@@ -3251,6 +3455,7 @@ struct Index {
           this.isPlaying = false;
           this.setMiniPlayButtonState(false, false);
           this.stopDiscRotation();
+          this.stopLiveViewIconRotation(true);
           void this.updateMusicLiveView(false);
           void this.updateAVSessionState(false);
         }
@@ -3364,6 +3569,7 @@ struct Index {
     this.pendingStartSeekMs = 0;
     this.lastProgressSnapshotMs = 0;
     this.stopDiscRotation();
+    this.stopLiveViewIconRotation(true);
     if (existingPlayer) {
       try {
         await existingPlayer.release();

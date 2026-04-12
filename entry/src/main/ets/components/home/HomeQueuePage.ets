@@ -22,10 +22,13 @@ export struct HomeQueuePage {
   @Prop activeCollectionTitle: string = '全部音乐';
   @Prop showRenameDialog: boolean = false;
   @Prop renameText: string = '';
+  @Prop searchKeyword: string = '';
   @Prop bottomInset: number = 0;
   @Prop coveredTrackIds: string[] = [];
   onOpenPlaylistDrawer: () => void = () => {};
   onSelectPlayMode: (mode: PlayMode) => void = (_: PlayMode) => {};
+  onSearchKeywordChange: (value: string) => void = (_: string) => {};
+  onSearch: () => void = () => {};
   onTrackTap: (track: MusicTrack) => void = (_: MusicTrack) => {};
   onToggleFavorite: (trackId: string) => void = (_: string) => {};
   onOpenRename: (track: MusicTrack) => void = (_: MusicTrack) => {};
@@ -67,6 +70,26 @@ export struct HomeQueuePage {
     return `${track.id}_${track.isFavorite ? '1' : '0'}`;
   }
 
+  private currentPlayModeIcon(): Resource {
+    if (this.playMode === PlayMode.Shuffle) {
+      return $r('app.media.ic_shuffle');
+    }
+    if (this.playMode === PlayMode.Loop) {
+      return $r('app.media.ic_loop');
+    }
+    return $r('app.media.ic_sequential');
+  }
+
+  private cyclePlayMode(): void {
+    if (this.playMode === PlayMode.Sequential) {
+      this.onSelectPlayMode(PlayMode.Shuffle);
+    } else if (this.playMode === PlayMode.Shuffle) {
+      this.onSelectPlayMode(PlayMode.Loop);
+    } else {
+      this.onSelectPlayMode(PlayMode.Sequential);
+    }
+  }
+
   @Builder
   private playModeButton(label: string, icon: Resource, mode: PlayMode) {
     Row({ space: 5 }) {
@@ -90,66 +113,88 @@ export struct HomeQueuePage {
 
   @Builder
   private playlistHeader() {
-    Row({ space: 12 }) {
-      Row({ space: 10 }) {
-        Row() {
-          Image($r('app.media.ic_list'))
-            .width(PAGE_HEADER_ICON_SIZE)
-            .height(PAGE_HEADER_ICON_SIZE)
-            .fillColor(this.theme().navActiveIcon)
-        }
-        .width(30)
-        .height(30)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(this.theme().controlSecondaryBackground)
-        .borderRadius(15)
-        .border({
-          width: 1,
-          color: this.theme().controlSecondaryBorder
-        })
-
-        Column({ space: 2 }) {
-          Text(this.activeCollectionTitle)
-            .fontSize(PAGE_HEADER_PRIMARY_FONT_SIZE)
-            .fontColor(this.theme().primaryText)
-            .fontWeight(FontWeight.Medium)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(`共 ${this.tracks.length} 首`)
-            .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
-            .fontColor(this.theme().secondaryText)
-        }
-        .alignItems(HorizontalAlign.Start)
+    Row({ space: 8 }) {
+      Row() {
+        Image($r('app.media.ic_list'))
+          .width(PAGE_HEADER_ICON_SIZE)
+          .height(PAGE_HEADER_ICON_SIZE)
+          .fillColor(this.theme().navActiveIcon)
       }
-      .layoutWeight(1)
+      .width(38)
       .height(38)
-      .padding({ left: 10, right: 14 })
-      .backgroundColor(this.playlistTriggerBackground())
-      .borderRadius(16)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(this.theme().controlSecondaryBackground)
+      .borderRadius(19)
       .border({
-        width: this.playlistTriggerBorderWidth(),
-        color: this.playlistTriggerBorderColor()
+        width: 1,
+        color: this.theme().controlSecondaryBorder
       })
       .onClick(() => {
         this.onOpenPlaylistDrawer();
       })
 
-      Row({ space: 2 }) {
-        this.playModeButton('随机', $r('app.media.ic_shuffle'), PlayMode.Shuffle)
-        this.playModeButton('顺序', $r('app.media.ic_sequential'), PlayMode.Sequential)
-        this.playModeButton('循环', $r('app.media.ic_loop'), PlayMode.Loop)
+      Row({ space: 8 }) {
+        Image($r('app.media.ic_search'))
+          .width(16)
+          .height(16)
+          .fillColor(this.theme().tertiaryText)
+
+        TextInput({ text: this.searchKeyword, placeholder: '搜索标题...' })
+          .placeholderColor(this.theme().tertiaryText)
+          .placeholderFont({ size: PAGE_HEADER_SECONDARY_FONT_SIZE })
+          .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
+          .fontColor(this.theme().primaryText)
+          .backgroundColor(Color.Transparent)
+          .padding(0)
+          .layoutWeight(1)
+          .height(38)
+          .onChange((value: string) => {
+            this.onSearchKeywordChange(value);
+          })
+          .onSubmit(() => {
+            this.onSearch();
+          })
+
+        Text('搜索')
+          .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
+          .fontColor(this.theme().accent)
+          .fontWeight(FontWeight.Medium)
+          .onClick(() => {
+            this.onSearch();
+          })
       }
+      .layoutWeight(1)
+      .height(38)
+      .padding({ left: 12, right: 12 })
       .backgroundColor(this.theme().controlSecondaryBackground)
-      .borderRadius(14)
-      .padding(3)
+      .borderRadius(19)
       .border({
         width: 1,
         color: this.theme().controlSecondaryBorder
       })
+
+      Row() {
+        Image(this.currentPlayModeIcon())
+          .width(PAGE_HEADER_ICON_SIZE)
+          .height(PAGE_HEADER_ICON_SIZE)
+          .fillColor(this.theme().navActiveIcon)
+      }
+      .width(38)
+      .height(38)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(this.theme().controlSecondaryBackground)
+      .borderRadius(19)
+      .border({
+        width: 1,
+        color: this.theme().controlSecondaryBorder
+      })
+      .onClick(() => {
+        this.cyclePlayMode();
+      })
     }
     .width('100%')
     .height(PAGE_HEADER_HEIGHT)
-    .padding({ left: 16, right: 8 })
+    .padding({ left: 16, right: 16 })
     .backgroundColor(this.theme().headerBackground)
     .borderRadius(PAGE_HEADER_RADIUS)
     .border({

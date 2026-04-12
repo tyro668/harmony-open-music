@@ -5,6 +5,11 @@ import { avSession } from '@kit.AVSessionKit';
 import { WantAgent } from '@ohos.app.ability.wantAgent';
 import wantAgent from '@ohos.app.ability.wantAgent';
 
+import {
+  LIVE_VIEW_ICON_FILE_NAME,
+  LIVE_VIEW_ICON_FRAME_COUNT,
+  LIVE_VIEW_ICON_FRAME_PREFIX
+} from '../constants/AppConstants';
 import { MusicTrack, PlaybackCollectionSummary } from '../models/AppModels';
 
 export async function createPlaybackWantAgent(
@@ -29,7 +34,8 @@ export async function createPlaybackWantAgent(
 export function createPlaybackLiveView(
   track: MusicTrack,
   clickAction: WantAgent,
-  sequence: number
+  sequence: number,
+  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME
 ): liveViewManager.LiveView {
   return {
     id: 1,
@@ -52,7 +58,7 @@ export function createPlaybackLiveView(
         type: liveViewManager.CapsuleType.CAPSULE_TYPE_TEXT,
         status: 1,
         title: track.title,
-        icon: 'startIcon.png',
+        icon: iconFileName,
         backgroundColor: '#FF2A2928'
       }
     }
@@ -64,7 +70,8 @@ export function applyPlaybackLiveViewUpdate(
   track: MusicTrack,
   sequence: number,
   progress: number,
-  playing: boolean
+  playing: boolean,
+  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME
 ): liveViewManager.LiveView {
   liveView.sequence = sequence;
   liveView.liveViewData.primary.title = track.title;
@@ -79,7 +86,7 @@ export function applyPlaybackLiveViewUpdate(
     type: liveViewManager.CapsuleType.CAPSULE_TYPE_TEXT,
     status: 1,
     title: playing ? '正在播放' : '已暂停',
-    icon: 'startIcon.png',
+    icon: iconFileName,
     backgroundColor: '#FF2A2928'
   };
   return liveView;
@@ -87,7 +94,8 @@ export function applyPlaybackLiveViewUpdate(
 
 export function applyStoppedLiveViewUpdate(
   liveView: liveViewManager.LiveView,
-  sequence: number
+  sequence: number,
+  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME
 ): liveViewManager.LiveView {
   liveView.sequence = sequence;
   liveView.liveViewData.primary.layoutData = {
@@ -100,10 +108,18 @@ export function applyStoppedLiveViewUpdate(
     type: liveViewManager.CapsuleType.CAPSULE_TYPE_TEXT,
     status: 1,
     title: '播放结束',
-    icon: 'startIcon.png',
+    icon: iconFileName,
     backgroundColor: '#FF2A2928'
   };
   return liveView;
+}
+
+export function resolveLiveViewIconFileName(playing: boolean, frameIndex: number): string {
+  if (!playing) {
+    return LIVE_VIEW_ICON_FILE_NAME;
+  }
+  let normalizedIndex = ((frameIndex % LIVE_VIEW_ICON_FRAME_COUNT) + LIVE_VIEW_ICON_FRAME_COUNT) % LIVE_VIEW_ICON_FRAME_COUNT;
+  return `${LIVE_VIEW_ICON_FRAME_PREFIX}${normalizedIndex}.png`;
 }
 
 export function createSessionMetadata(track: MusicTrack): avSession.AVMetadata {
