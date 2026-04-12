@@ -322,9 +322,9 @@ export function buildPlaybackCollectionQueueTitle(): string {
 export async function startAudioBackgroundTask(
   context: common.UIAbilityContext,
   clickAction: WantAgent
-): Promise<void> {
+): Promise<backgroundTaskManager.ContinuousTaskNotification> {
   let bgModes: string[] = ['audioPlayback'];
-  await backgroundTaskManager.startBackgroundRunning(context, bgModes, clickAction);
+  return await backgroundTaskManager.startBackgroundRunning(context, bgModes, clickAction);
 }
 
 export async function stopAudioBackgroundTask(context: common.UIAbilityContext): Promise<void> {

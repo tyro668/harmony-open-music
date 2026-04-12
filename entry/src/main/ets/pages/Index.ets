@@ -7,6 +7,7 @@ import { relationalStore } from '@kit.ArkData';
 import { http } from '@kit.NetworkKit';
 import { avSession } from '@kit.AVSessionKit';
 import fs from '@ohos.file.fs';
+import notificationManager from '@ohos.notificationManager';
 import audio from '@ohos.multimedia.audio';
 import { util } from '@kit.ArkTS';
 
@@ -306,6 +307,13 @@ struct Index {
   private coverArtFilePath: string = '';
   private session: avSession.AVSession | null = null;
   private isBackgroundTaskRunning: boolean = false;
+  private backgroundNotificationId: number = -1;
+  private backgroundNotificationLabel: string = '';
+  private backgroundNotificationSlotType: number = -1;
+  private backgroundNotificationContentType: number = -1;
+  private backgroundNotificationTypeCode: number = -1;
+  private backgroundNotificationSupportsSystemLiveView: boolean = false;
+  private backgroundNotificationProbeTimer: number = -1;
   private sourceImportQueue: SourceImportTask[] = [];
   private isProcessingSourceImportQueue: boolean = false;
   private baiduPanLastAuthMessage: string = '';
@@ -1586,6 +1594,211 @@ struct Index {
     }
   }
 
+  private clearBackgroundNotificationProbe(): void {
+    if (this.backgroundNotificationProbeTimer < 0) {
+      return;
+    }
+    clearTimeout(this.backgroundNotificationProbeTimer);
+    this.backgroundNotificationProbeTimer = -1;
+  }
+
+  private resetBackgroundNotificationState(): void {
+    this.clearBackgroundNotificationProbe();
+    this.backgroundNotificationId = -1;
+    this.backgroundNotificationLabel = '';
+    this.backgroundNotificationSlotType = -1;
+    this.backgroundNotificationContentType = -1;
+    this.backgroundNotificationTypeCode = -1;
+    this.backgroundNotificationSupportsSystemLiveView = false;
+  }
+
+  private scheduleBackgroundNotificationProbe(): void {
+    this.clearBackgroundNotificationProbe();
+    this.backgroundNotificationProbeTimer = setTimeout(() => {
+      this.backgroundNotificationProbeTimer = -1;
+      void this.inspectBackgroundNotification();
+      void this.updateBackgroundLyricNotification();
+    }, 400) as number;
+  }
+
+  private backgroundNotificationDetailText(track: MusicTrack): string {
+    let secondaryLyricText = this.currentLyricSecondaryText().trim();
+    if (secondaryLyricText.length > 0) {
+      return secondaryLyricText;
+    }
+    let metaText = this.avSessionTrackMetaText(track);
+    if (metaText.length > 0) {
+      return metaText;
+    }
+    return track.title;
+  }
+
+  private backgroundNotificationAdditionalText(track: MusicTrack, lyricTitle: string): string {
+    if (track.title.trim().length > 0 && track.title.trim() !== lyricTitle) {
+      return track.title.trim();
+    }
+    let metaText = this.avSessionTrackMetaText(track);
+    if (metaText.length > 0 && metaText !== lyricTitle) {
+      return metaText;
+    }
+    return '';
+  }
+
+  private backgroundNotificationRequestScore(request: notificationManager.NotificationRequest): number {
+    let score = 0;
+    if ((request.notificationSlotType ?? -1) === notificationManager.SlotType.LIVE_VIEW) {
+      score += 100;
+    }
+    if ((request.content.notificationContentType ?? -1) ===
+      notificationManager.ContentType.NOTIFICATION_CONTENT_SYSTEM_LIVE_VIEW) {
+      score += 100;
+    }
+    if (request.content.systemLiveView !== undefined) {
+      score += 80;
+    }
+    if (request.isOngoing === true) {
+      score += 20;
+    }
+    if (request.isUnremovable === true) {
+      score += 10;
+    }
+    return score;
+  }
+
+  private selectBackgroundNotificationRequest(
+    notifications: notificationManager.NotificationRequest[]
+  ): notificationManager.NotificationRequest | null {
+    if (notifications.length === 0) {
+      return null;
+    }
+    if (this.backgroundNotificationId >= 0) {
+      let exactId = notifications.find((item: notificationManager.NotificationRequest) => item.id === this.backgroundNotificationId);
+      if (exactId) {
+        return exactId;
+      }
+    }
+    if (this.backgroundNotificationLabel.length > 0) {
+      let exactLabel = notifications.find((item: notificationManager.NotificationRequest) =>
+        (item.label ?? '') === this.backgroundNotificationLabel
+      );
+      if (exactLabel) {
+        return exactLabel;
+      }
+    }
+    let sorted = notifications.slice().sort((left: notificationManager.NotificationRequest, right: notificationManager.NotificationRequest) => {
+      let scoreDiff = this.backgroundNotificationRequestScore(right) - this.backgroundNotificationRequestScore(left);
+      if (scoreDiff !== 0) {
+        return scoreDiff;
+      }
+      return (right.deliveryTime ?? 0) - (left.deliveryTime ?? 0);
+    });
+    return sorted[0];
+  }
+
+  private async inspectBackgroundNotification(): Promise<void> {
+    try {
+      let notifications = await notificationManager.getActiveNotifications();
+      let request = this.selectBackgroundNotificationRequest(notifications);
+      if (!request) {
+        console.info(`background notification not found: activeCount=${notifications.length}`);
+        return;
+      }
+      this.backgroundNotificationId = request.id ?? -1;
+      this.backgroundNotificationLabel = request.label ?? '';
+      let slotType = request.notificationSlotType ?? -1;
+      let contentType = request.content.notificationContentType ?? -1;
+      let systemLiveView = request.content.systemLiveView;
+      this.backgroundNotificationSlotType = slotType;
+      this.backgroundNotificationContentType = contentType;
+      this.backgroundNotificationSupportsSystemLiveView = systemLiveView !== undefined ||
+        slotType === notificationManager.SlotType.LIVE_VIEW ||
+        contentType === notificationManager.ContentType.NOTIFICATION_CONTENT_SYSTEM_LIVE_VIEW;
+      if (systemLiveView && typeof systemLiveView.typeCode === 'number') {
+        this.backgroundNotificationTypeCode = systemLiveView.typeCode;
+      }
+      console.info(
+        `inspectBackgroundNotification: id=${this.backgroundNotificationId}, label=${this.backgroundNotificationLabel}, slotType=${slotType}, ` +
+        `contentType=${contentType}, supportsSystemLiveView=${this.backgroundNotificationSupportsSystemLiveView}, ` +
+        `typeCode=${this.backgroundNotificationTypeCode}, capsuleTitle=${systemLiveView?.capsule?.title ?? ''}, ` +
+        `title=${systemLiveView?.title ?? ''}, text=${systemLiveView?.text ?? ''}`
+      );
+    } catch (error) {
+      console.error(`inspectBackgroundNotification failed: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private buildBackgroundLyricNotificationRequest(track: MusicTrack): notificationManager.NotificationRequest | null {
+    if ((this.backgroundNotificationId < 0 && this.backgroundNotificationLabel.length === 0) ||
+      !this.backgroundNotificationSupportsSystemLiveView ||
+      this.backgroundNotificationTypeCode < 0) {
+      return null;
+    }
+    let lyricTitle = this.currentLyricMetadataText().trim();
+    if (lyricTitle.length === 0) {
+      lyricTitle = track.title.trim();
+    }
+    let detailText = this.backgroundNotificationDetailText(track);
+    let additionalText = this.backgroundNotificationAdditionalText(track, lyricTitle);
+    let liveViewContent: notificationManager.NotificationSystemLiveViewContent = {
+      typeCode: this.backgroundNotificationTypeCode,
+      title: lyricTitle,
+      text: detailText,
+      capsule: {
+        title: lyricTitle
+      }
+    };
+    if (additionalText.length > 0) {
+      liveViewContent.additionalText = additionalText;
+    }
+    let request: notificationManager.NotificationRequest = {
+      updateOnly: true,
+      isOngoing: true,
+      isUnremovable: true,
+      notificationSlotType: notificationManager.SlotType.LIVE_VIEW,
+      content: {
+        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_SYSTEM_LIVE_VIEW,
+        systemLiveView: liveViewContent
+      }
+    };
+    if (this.backgroundNotificationId >= 0) {
+      request.id = this.backgroundNotificationId;
+    }
+    if (this.backgroundNotificationLabel.length > 0) {
+      request.label = this.backgroundNotificationLabel;
+    }
+    return request;
+  }
+
+  private async updateBackgroundLyricNotification(): Promise<void> {
+    if (!this.isBackgroundTaskRunning) {
+      return;
+    }
+    if (!this.backgroundNotificationSupportsSystemLiveView || this.backgroundNotificationTypeCode < 0) {
+      await this.inspectBackgroundNotification();
+      if (!this.backgroundNotificationSupportsSystemLiveView || this.backgroundNotificationTypeCode < 0) {
+        return;
+      }
+    }
+    let track = this.currentTrack();
+    let request = this.buildBackgroundLyricNotificationRequest(track);
+    if (request === null) {
+      return;
+    }
+    try {
+      await notificationManager.publish(request);
+      console.info(
+        `updateBackgroundLyricNotification succeeded: id=${this.backgroundNotificationId}, ` +
+        `title=${request.content.systemLiveView?.title ?? ''}, capsule=${request.content.systemLiveView?.capsule?.title ?? ''}`
+      );
+    } catch (error) {
+      console.error(`updateBackgroundLyricNotification failed: ${JSON.stringify(error)}`);
+      let errorCode = (error as BusinessError).code;
+      if (errorCode === 1600007) {
+        this.resetBackgroundNotificationState();
+      }
+    }
+  }
+
   private async startBackgroundTask(): Promise<void> {
     if (this.isBackgroundTaskRunning) {
       return;
@@ -1593,10 +1806,22 @@ struct Index {
     try {
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
-      await startAudioBackgroundTask(context, clickAction);
+      let taskNotification = await startAudioBackgroundTask(context, clickAction);
       this.isBackgroundTaskRunning = true;
-      console.info('startBackgroundTask succeeded');
+      this.backgroundNotificationId = taskNotification.notificationId;
+      this.backgroundNotificationSlotType = taskNotification.slotType as number;
+      this.backgroundNotificationContentType = taskNotification.contentType as number;
+      this.backgroundNotificationTypeCode = -1;
+      this.backgroundNotificationSupportsSystemLiveView =
+        this.backgroundNotificationSlotType === notificationManager.SlotType.LIVE_VIEW ||
+        this.backgroundNotificationContentType === notificationManager.ContentType.NOTIFICATION_CONTENT_SYSTEM_LIVE_VIEW;
+      console.info(
+        `startBackgroundTask succeeded: notificationId=${this.backgroundNotificationId}, ` +
+        `slotType=${this.backgroundNotificationSlotType}, contentType=${this.backgroundNotificationContentType}`
+      );
+      this.scheduleBackgroundNotificationProbe();
     } catch (error) {
+      this.resetBackgroundNotificationState();
       console.error(`startBackgroundTask failed: ${JSON.stringify(error)}`);
     }
   }
@@ -1609,6 +1834,7 @@ struct Index {
       let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       await stopAudioBackgroundTask(context);
       this.isBackgroundTaskRunning = false;
+      this.resetBackgroundNotificationState();
       console.info('stopBackgroundTask succeeded');
     } catch (error) {
       console.error(`stopBackgroundTask failed: ${JSON.stringify(error)}`);
@@ -2206,6 +2432,9 @@ struct Index {
       if (this.session !== null) {
         void this.updateAVSessionCoverArt(track);
       }
+      if (this.isBackgroundTaskRunning) {
+        void this.updateBackgroundLyricNotification();
+      }
     }
   }
 
@@ -2451,11 +2680,15 @@ struct Index {
     return Array.from(keywordSet.values());
   }
 
-  private async findLyricRepairMatch(track: MusicTrack): Promise<MusicSourceTrack | null> {
+  private async findLyricRepairMatches(track: MusicTrack): Promise<MusicSourceTrack[]> {
     let keywords = this.lyricRepairSearchKeywords(track);
-    let bestMatch: MusicSourceTrack | null = null;
-    let bestScore = 0;
+    let scoredCandidates: [MusicSourceTrack, number][] = [];
+    let seenKeys: Set<string> = new Set();
+    let earlyExit = false;
     for (let keywordIndex = 0; keywordIndex < keywords.length; keywordIndex++) {
+      if (earlyExit) {
+        break;
+      }
       let keyword = keywords[keywordIndex];
       for (let sourceIndex = 0; sourceIndex < LYRIC_REPAIR_SEARCH_SOURCES.length; sourceIndex++) {
         let searchSource = LYRIC_REPAIR_SEARCH_SOURCES[sourceIndex];
@@ -2464,15 +2697,20 @@ struct Index {
           let candidateTracks = result.tracks.slice(0, 10);
           for (let candidateIndex = 0; candidateIndex < candidateTracks.length; candidateIndex++) {
             let candidate = candidateTracks[candidateIndex];
+            let candidateKey = `${candidate.source}:${candidate.songmid}`;
+            if (seenKeys.has(candidateKey)) {
+              continue;
+            }
+            seenKeys.add(candidateKey);
             let score = this.lyricRepairCandidateScore(track, candidate);
-            if (score > bestScore) {
-              bestScore = score;
-              bestMatch = candidate;
+            if (score >= LYRIC_REPAIR_MIN_MATCH_SCORE) {
+              scoredCandidates.push([candidate, score]);
             }
           }
-          if (bestScore >= LYRIC_REPAIR_STRONG_MATCH_SCORE && bestMatch !== null) {
-            console.info(`lyric repair matched: title=${track.title}, artist=${track.artist}, source=${bestMatch.source}, score=${bestScore}`);
-            return bestMatch;
+          // If we have a strong match, finish searching remaining sources for this keyword but skip further keywords
+          let topScore = scoredCandidates.length > 0 ? scoredCandidates.reduce((max: number, pair: [MusicSourceTrack, number]) => pair[1] > max ? pair[1] : max, 0) : 0;
+          if (topScore >= LYRIC_REPAIR_STRONG_MATCH_SCORE) {
+            earlyExit = true;
           }
         } catch (error) {
           let errMessage = error instanceof Error ? error.message : String(error);
@@ -2480,12 +2718,14 @@ struct Index {
         }
       }
     }
-    if (bestMatch !== null && bestScore >= LYRIC_REPAIR_MIN_MATCH_SCORE) {
-      console.info(`lyric repair selected best match: title=${track.title}, artist=${track.artist}, source=${bestMatch.source}, score=${bestScore}`);
-      return bestMatch;
+    // Sort by score descending
+    scoredCandidates.sort((a: [MusicSourceTrack, number], b: [MusicSourceTrack, number]) => b[1] - a[1]);
+    if (scoredCandidates.length > 0) {
+      console.info(`lyric repair found ${scoredCandidates.length} candidates: title=${track.title}, artist=${track.artist}, topScore=${scoredCandidates[0][1]}, topSource=${scoredCandidates[0][0].source}`);
+    } else {
+      console.info(`lyric repair no candidates above threshold: title=${track.title}, artist=${track.artist}`);
     }
-    console.info(`lyric repair skipped low-confidence match: title=${track.title}, artist=${track.artist}, score=${bestScore}`);
-    return null;
+    return scoredCandidates.map((pair: [MusicSourceTrack, number]) => pair[0]);
   }
 
   private updateTrackSourceImportKey(trackId: string, sourceImportKey: string): void {
@@ -2506,21 +2746,31 @@ struct Index {
   }
 
   private async repairLyricsForTrack(track: MusicTrack): Promise<boolean> {
-    let matchedTrack = await this.findLyricRepairMatch(track);
-    if (matchedTrack === null) {
+    let matchedTracks = await this.findLyricRepairMatches(track);
+    if (matchedTracks.length === 0) {
       return false;
     }
-    let lyricResult = await fetchBuiltInSourceLyrics(matchedTrack);
-    if (lyricResult === null) {
-      console.info(`lyric repair found source track but no lyrics: source=${matchedTrack.source}, title=${matchedTrack.name}`);
-      return false;
+    for (let index = 0; index < matchedTracks.length; index++) {
+      let matchedTrack = matchedTracks[index];
+      try {
+        let lyricResult = await fetchBuiltInSourceLyrics(matchedTrack);
+        if (lyricResult === null || lyricResult.lyric.trim().length === 0) {
+          console.info(`lyric repair no lyrics from source: source=${matchedTrack.source}, songmid=${matchedTrack.songmid}, trying next candidate`);
+          continue;
+        }
+        if (!this.saveTrackLyricSidecars(track.filePath, lyricResult)) {
+          continue;
+        }
+        this.updateTrackSourceImportKey(track.id, buildSourceTrackImportKey(matchedTrack));
+        await this.refreshLyricsForTrack(track.id);
+        return true;
+      } catch (error) {
+        let errMessage = error instanceof Error ? error.message : String(error);
+        console.error(`lyric repair fetch failed: source=${matchedTrack.source}, songmid=${matchedTrack.songmid}, error=${errMessage}`);
+      }
     }
-    if (!this.saveTrackLyricSidecars(track.filePath, lyricResult)) {
-      return false;
-    }
-    this.updateTrackSourceImportKey(track.id, buildSourceTrackImportKey(matchedTrack));
-    await this.refreshLyricsForTrack(track.id);
-    return true;
+    console.info(`lyric repair exhausted all ${matchedTracks.length} candidates: title=${track.title}, artist=${track.artist}`);
+    return false;
   }
 
   private async repairMissingImportedTrackLyrics(): Promise<void> {
@@ -4151,6 +4401,7 @@ struct Index {
           this.currentLyricIndex = lyricIdx;
           void this.updateMusicLiveView(this.isPlaying);
           void this.updateAVSessionCoverArt(this.currentTrack());
+          void this.updateBackgroundLyricNotification();
         }
       }
       // 每5秒更新一次LiveView进度和AVSession播放位置
@@ -4174,6 +4425,7 @@ struct Index {
         void this.updateMusicLiveView(this.isPlaying);
         void this.updateAVSessionState(this.isPlaying);
         void this.updateAVSessionCoverArt(this.currentTrack());
+        void this.updateBackgroundLyricNotification();
       }
     });
 
