@@ -1,6 +1,5 @@
 import { common } from '@kit.AbilityKit';
 import { preferences, relationalStore } from '@kit.ArkData';
-import { fileShare } from '@kit.CoreFileKit';
 
 import {
   APP_DATABASE_NAME,
@@ -1064,59 +1063,4 @@ export async function appendPlaybackRecord(
     playbackRecordValues(record, Date.now()),
     relationalStore.ConflictResolution.ON_CONFLICT_REPLACE
   );
-}
-
-export function createReadPolicies(uris: string[]): Array<fileShare.PolicyInfo> {
-  let policies: Array<fileShare.PolicyInfo> = [];
-  uris.forEach((uri: string) => {
-    policies.push({
-      uri: uri,
-      operationMode: fileShare.OperationMode.READ_MODE
-    });
-  });
-  return policies;
-}
-
-export async function persistReadUriPermissions(uris: string[]): Promise<boolean> {
-  if (uris.length === 0) {
-    return true;
-  }
-  try {
-    let policies = createReadPolicies(uris);
-    let persistedResults = await fileShare.checkPersistentPermission(policies);
-    let missingPolicies: Array<fileShare.PolicyInfo> = [];
-    for (let index = 0; index < persistedResults.length; index++) {
-      if (!persistedResults[index]) {
-        missingPolicies.push(policies[index]);
-      }
-    }
-    if (missingPolicies.length > 0) {
-      await fileShare.persistPermission(missingPolicies);
-    }
-    return true;
-  } catch (error) {
-    console.error(`persist uri permissions failed: ${JSON.stringify(error)}`);
-    return false;
-  }
-}
-
-export async function activatePersistedReadUriPermissions(trackUris: string[]): Promise<void> {
-  if (trackUris.length === 0) {
-    return;
-  }
-  try {
-    let policies = createReadPolicies(trackUris);
-    let persistedResults = await fileShare.checkPersistentPermission(policies);
-    let activePolicies: Array<fileShare.PolicyInfo> = [];
-    for (let index = 0; index < persistedResults.length; index++) {
-      if (persistedResults[index]) {
-        activePolicies.push(policies[index]);
-      }
-    }
-    if (activePolicies.length > 0) {
-      await fileShare.activatePermission(activePolicies);
-    }
-  } catch (error) {
-    console.error(`activate uri permissions failed: ${JSON.stringify(error)}`);
-  }
 }

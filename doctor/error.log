@@ -1,0 +1,344 @@
+04-12 16:53:47.002   12013-13552   C01719/ffrt                     com.opens...is.music  W     7:RecordSymbolAndBacktrace:397 Process:com.opensource.metis.music,Tid:13539,Qos:2,CWorker:1,EWorker:1,SWorker:0,TaskType:0,timeout:5s
+04-12 16:53:49.499   12013-13544   C03f00/ArkCompiler              com.opens...is.music  I     [gc] SmartGC: app cold start finished
+04-12 16:53:50.261   12013-12013   C02805/InputKeyFlow             com.opens...is.music  I     [][OnPointerEvent:242] ac: down: 320
+04-12 16:53:50.261   12013-12013   C02805/InputKeyFlow             com.opens...is.music  I     [P:D:320][OnPointerEvent:649] recv
+04-12 16:53:50.261   12013-12013   C04213/InputKeyFlow             com.opens...is.music  I     HandleInputEvent: eid:0,InputId:320,wid:44,ac:2
+04-12 16:53:50.263   12013-12013   C03951/InputKeyFlow             com.opens...is.music  I     [(100000:100000:scope)] ITK Id:320, fId:0, T:0, I=0, M=0
+04-12 16:53:50.263   12013-12013   C03934/AceUIEvent               com.opens...is.music  W     [(100000:100000:scope)] Slider/122 eventHub not enabled, needn't do touch test
+04-12 16:53:50.263   12013-12013   C02220/IntentionClient          com.opens...is.music  I     in Connect, enter
+04-12 16:53:50.263   12013-12013   C02220/IntentionClient          com.opens...is.music  I     in Connect, leave
+04-12 16:53:50.264   12013-12013   C03905/AceDrag                  com.opens...is.music  I     [(100000:100000:scope)] RequestStatusTransition from 0 to 1.
+04-12 16:53:50.264   12013-12013   C03951/InputKeyFlow             com.opens...is.music  I     [(100000:100000:scope)] ITK Id:320, TTHNI:fId: 0{ T: Stack, D: 10 };
+04-12 16:53:50.264   12013-12013   C03951/InputKeyFlow             com.opens...is.music  I     [(100000:100000:scope)] ITK Id:320, TTHRTI: T ClickRecognizer info: { T: Stack };T LongPressRecognizer info: { T: Image }; { T: Image };T PanRecognizer info: { T: Image };
+04-12 16:53:50.265   12013-12013   C03919/AceInputTracking         com.opens...is.music  I     [(100000:100000:scope)] Consumed id:320, last id:-1
+04-12 16:53:50.265   12013-12013   C04213/InputKeyFlow             com.opens...is.music  I     ConsumePointerEventInner: InputId:320,wid:44,pointId:0,srcType:2,rect:[0,0,1320,2848],notify:1
+04-12 16:53:50.314   12013-12013   C02220/IntentionClient          com.opens...is.music  I     in Connect, enter
+04-12 16:53:50.314   12013-12013   C02220/IntentionClient          com.opens...is.music  I     in Connect, leave
+04-12 16:53:50.330   12013-12013   C02805/InputKeyFlow             com.opens...is.music  I     [][OnPointerEvent:242] ac: up: 321
+04-12 16:53:50.330   12013-12013   C02805/InputKeyFlow             com.opens...is.music  I     [P:U:321][OnPointerEvent:649] recv
+04-12 16:53:50.330   12013-12013   C04213/InputKeyFlow             com.opens...is.music  I     HandleInputEvent: eid:1,InputId:321,wid:44,ac:4
+04-12 16:53:50.330   12013-12013   C03951/InputKeyFlow             com.opens...is.music  I     [(100000:100000:scope)] ITK Id:321, fId:0, T:1, I=0, M=0
+04-12 16:53:50.330   12013-12013   C03905/AceDrag                  com.opens...is.music  I     [(100000:100000:scope)] Trigger pan onReject
+04-12 16:53:50.330   12013-12013   C03905/AceDrag                  com.opens...is.music  W     [(100000:100000:scope)] Drag gesture has been canceled
+04-12 16:53:50.330   12013-12013   C03905/AceDrag                  com.opens...is.music  I     [(100000:100000:scope)] RequestStatusTransition from 1 to 0.
+04-12 16:53:50.331   12013-12013   C0391e/AceGesture               com.opens...is.music  I     [(100000:100000:scope)] Click try accept
+04-12 16:53:50.331   12013-12013   C03951/InputKeyFlow             com.opens...is.music  I     [(100000:100000:scope)] CLK RACC, T: Stack
+04-12 16:53:50.338   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #258 0xC06AF0 JsCreateAVPlayer Out
+04-12 16:53:50.343   12013-12013   C03919/AceInputTracking         com.opens...is.music  I     [(100000:100000:scope)] Consumed id:321, last id:-1
+04-12 16:53:50.343   12013-12013   C04213/InputKeyFlow             com.opens...is.music  I     ConsumePointerEventInner: InputId:321,wid:44,pointId:0,srcType:2,rect:[0,0,1320,2848],notify:1
+04-12 16:53:50.343   12013-13571   C0390d/AceOverlay               com.opens...is.music  I     [(-1:100000:singleton)] RVS_ENABLE_CHECK Result: 0
+04-12 16:53:50.343   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #71 0xF52C00 ctor
+04-12 16:53:50.343   12013-12013   C02b2b/PlayerImpl               com.opens...is.music  I     #105 PlayerImpl:0x1F9F18 traceId not valid
+04-12 16:53:50.343   12013-12013   C02b22/MediaUtils               com.opens...is.music  E     [a92ab15d9e53df1, 0, 0] (GetClientBundleName(), 115): Error GetBundleNameForUid fail, uid is 20020065
+04-12 16:53:50.348   12013-12013   C02b24/TaskInner                com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] [Task]:>> OS_Ply_HiAppEvent groupId:HiAppEventGroup type:6 ctor
+04-12 16:53:50.348   12013-12013   C02b24/PipelineTreadPool        com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] (PipeLineThread(), 131): PipeLineThread groupId:OS_Ply_HiAppEvent1 type:6 created call
+04-12 16:53:50.348   12013-12013   C02b24/Thread                   com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] (CreateThread(), 97): thread OS_Ply_HiAppEvent1_S create success
+04-12 16:53:50.348   12013-12013   C02b24/Thread                   com.opens...is.music  W     [a92ab15d9e53df1, 0, 0] (SetNameInternal(), 124): task name OS_Ply_HiAppEvent1_S exceed max size: 15
+04-12 16:53:50.348   12013-13814   C02b24/PipelineTreadPool        com.opens...is.music  I     (Run(), 178): PipeLineThread OS_Ply_HiAppEvent1_S run enter
+04-12 16:53:50.348   12013-12013   C02b24/TaskInner                com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] [Task]:>> OS_Ply_HiAppEvent Init
+04-12 16:53:50.348   12013-12013   C02d07/Verify                   com.opens...is.music  W     [a92ab15d9e53df1, 0, 0] invalid configName=
+04-12 16:53:50.348   12013-12013   C02d07/ObserverMgr              com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] register processor=1 exit
+04-12 16:53:50.348   12013-12013   C02b2b/TaskQueue                com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] #45 0x410AC0 Instance thread started [OS_AVPlayerNapi], curTimeUs: [1764742526840]
+04-12 16:53:50.348   12013-12013   C02b2b/AVPlayerCallback         com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] #668 0x507798 Instances create
+04-12 16:53:50.349   12013-13816   C02b2b/TaskQueue                com.opens...is.music  I     #153 Enter TaskProcessor [OS_AVPlayerNapi], tid_: (13816)
+04-12 16:53:50.349   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     [a92ab15d9e53df1, 0, 0] #193 0xF52C00 Constructor success
+04-12 16:53:50.349   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3435 0xF52C00 JsSetOnCallback callbackName: stateChange success
+04-12 16:53:50.349   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3435 0xF52C00 JsSetOnCallback callbackName: timeUpdate success
+04-12 16:53:50.350   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3435 0xF52C00 JsSetOnCallback callbackName: seekDone success
+04-12 16:53:50.350   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3435 0xF52C00 JsSetOnCallback callbackName: durationUpdate success
+04-12 16:53:50.350   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3435 0xF52C00 JsSetOnCallback callbackName: audioInterrupt success
+04-12 16:53:50.350   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3435 0xF52C00 JsSetOnCallback callbackName: error success
+04-12 16:53:50.351   12013-13815   C02d07/Config                   com.opens...is.music  I     get free size=3950755840
+04-12 16:53:50.351   12013-13815   C02d07/ObserverMgr              com.opens...is.music  I     init watchers
+04-12 16:53:50.353   12013-13588   C01203/Ans                      com.opens...is.music  E     Read result failed, code is: 90.
+04-12 16:53:50.353   12013-13588   C05301/live_view_manager        com.opens...is.music  I     [live_view_client.cpp:621] IsLiveViewEnabled# GetEnabledForBundleSlot ret is 67108888
+04-12 16:53:50.353   12013-12013   C01350/WantAgent                com.opens...is.music  I     [napi_want_agent1304]on get wantAgent
+04-12 16:53:50.354   12013-12013   C05301/live_view_manager        com.opens...is.music  I     [live_view_param_validate.cpp:1280] ExtendDataParamValidate# The extensionData is nullptr
+04-12 16:53:50.354   12013-12013   C05301/live_view_manager        com.opens...is.music  E     [live_view_handler.cpp:237] StartLiveView# StartLiveView async work fail: [Error(401), description(Parameter error. The type of layoutData.nodeIcons mustbe Array<string | image.PixelMap> [or the parameter length exceeds the limit].)]
+04-12 16:53:50.358   12013-12013   C01350/WantAgent                com.opens...is.music  I     [napi_want_agent1304]on get wantAgent
+04-12 16:53:50.359   12013-12013   C05301/live_view_manager        com.opens...is.music  E     [live_view_handler.cpp:237] StartLiveView# StartLiveView async work fail: [Error(401), description(Parameter error. The type of primary.layoutData mustbe LayoutData [or the parameter is mandatory].)]
+04-12 16:53:50.359   12013-12013   A03d00/JSAPP                    com.opens...is.music  E     startMusicLiveView compact retry failed: {"code":401}
+04-12 16:53:50.359   12013-12013   A03d00/JSAPP                    com.opens...is.music  E     startMusicLiveView failed: {"code":401}
+04-12 16:53:50.359   12013-12013   C01350/WantAgent                com.opens...is.music  I     [napi_want_agent1304]on get wantAgent
+04-12 16:53:50.361   12013-12013   C02b91/AVSession                com.opens...is.music  I     [RegisterServiceStartCallback]RegisterServiceStartCallback
+04-12 16:53:50.361   12013-12013   C02b91/AVSession                com.opens...is.music  I     [CreateAVSession]RegisterServiceStartCallback res=0
+04-12 16:53:50.361   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=CreateAVSession
+04-12 16:53:50.361   12013-13587   C02b91/AVSession                com.opens...is.music  I     [GetService]enter GetService
+04-12 16:53:50.361   12013-13587   C02b91/AVSession                com.opens...is.music  I     [GetService]enter check SystemAbility
+04-12 16:53:50.362   12013-13587   C02b91/AVSession                com.opens...is.music  I     [AVSessionServiceProxy]constructor
+04-12 16:53:50.362   12013-13587   C02b91/AVSession                com.opens...is.music  I     [GetService]get service done
+04-12 16:53:50.362   12013-13587   C02b91/AVSession                com.opens...is.music  I     [RegisterClientDeathObserver]RegisterClientDeathObserver with ClientDeathStub success
+04-12 16:53:50.362   12013-13587   C02b91/AVSession                com.opens...is.music  I     [RegisterServiceStateListener]RegisterServiceStateListener enter
+04-12 16:53:50.362   12013-13587   C02b91/AVSession                com.opens...is.music  I     [RegisterServiceStateListener]RegisterServiceStateListener ret=0
+04-12 16:53:50.365   12013-13523   C02b91/AVSession                com.opens...is.music  I     [OnAddSystemAbility]OnAddSystemAbility systemAbilityId=3010
+04-12 16:53:50.365   12013-13523   C02b91/AVSession                com.opens...is.music  I     [OnServiceStateChange]OnServiceStateChange enter isAddSystemAbility:1 isServiceDie:0
+04-12 16:53:50.367   12013-12013   C02b91/AVSession                com.opens...is.music  I     [NapiAVSession]construct
+04-12 16:53:50.367   12013-12013   C02b91/AVSession                com.opens...is.music  I     [NapiAVSession]construct
+04-12 16:53:50.367   12013-12013   C02b91/AVSession                com.opens...is.music  I     [NewInstance]NapiAVSession NewInstance sessionId=CD0***, sessionType:audio
+04-12 16:53:50.368   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     applyAVSessionMetadata: liveViewUnavailable=true, compact=false, title=花海 - 周杰伦 (Jay Chou), subtitle=花海, singleLyric=花海 - 周杰伦 (Jay Chou)
+04-12 16:53:50.368   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVMetaData
+04-12 16:53:50.368   12013-13586   C02b91/AVSession                com.opens...is.music  I     [doMetaDataSetNapi]do metadata set with check uri alive:0, pixel alive:0, session alive:1
+04-12 16:53:50.368   12013-13586   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]SetAVMetaData in proxy
+04-12 16:53:50.368   12013-13586   C02b91/AVSession                com.opens...is.music  E     [WriteToParcel]isImageValid,checkFail!ret:true
+04-12 16:53:50.368   12013-13822   C02b91/AVSession                com.opens...is.music  I     [AVQueueImgDownloadSyncExecutor]doAVQueueImgDownload:source-1775983601308
+04-12 16:53:50.368   12013-13822   C02b91/AVSession                com.opens...is.music  E     [AVQueueImgDownloadSyncExecutor]avqImg not match download conditions
+04-12 16:53:50.368   12013-13586   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]set avmetadata done
+04-12 16:53:50.368   12013-13586   C02b91/AVSession                com.opens...is.music  E     [doMetaDataSetNapi]do metadata set with img uri empty
+04-12 16:53:50.368   12013-13586   C02b91/AVSession                com.opens...is.music  I     [operator()]doMetaDataSet res:0|1
+04-12 16:53:50.368   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetLaunchAbility
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVQueueTitle
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVQueueItems
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [NapiAVSessionCallback]construct NapiAVSessionCallback
+04-12 16:53:50.369   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 0
+04-12 16:53:50.370   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 0
+04-12 16:53:50.370   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 1
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 1
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 3
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 3
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 4
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 4
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 7
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 7
+04-12 16:53:50.371   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 5
+04-12 16:53:50.372   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 5
+04-12 16:53:50.372   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 6
+04-12 16:53:50.372   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 6
+04-12 16:53:50.372   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 9
+04-12 16:53:50.372   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 9
+04-12 16:53:50.372   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 10
+04-12 16:53:50.377   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 10
+04-12 16:53:50.377   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddSupportCommand]add support command for 17
+04-12 16:53:50.378   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AddCallback]Add callback 21
+04-12 16:53:50.378   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=Activate
+04-12 16:53:50.378   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     createAVSession succeeded
+04-12 16:53:50.378   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     attachTrackSource start: trackId=source-1775983601308, raw=, sourceUri=, filePath=/data/storage/el2/base/haps/entry/files/downloads/1775983600229-花海.mp3
+04-12 16:53:50.378   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #1931 JsSetAVFileDescriptor In
+04-12 16:53:50.378   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #1970 JsSetAVFileDescriptor Out
+04-12 16:53:50.378   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     attachTrackSource using fdSrc: trackId=source-1775983601308, path=/data/storage/el2/base/haps/entry/files/downloads/1775983600229-花海.mp3, length=29671753
+04-12 16:53:50.378   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #1958 SetAVFileDescriptor Task
+04-12 16:53:50.378   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #1962 JsSetAVFileDescriptor fd: 81, offset: 0, size: 29671753
+04-12 16:53:50.378   12013-13816   C02b2b/FdUtils                  com.opens...is.music  W     #72 Getxattr value failed, errno is No data available
+04-12 16:53:50.378   12013-13816   C02b2b/FdUtils                  com.opens...is.music  W     #62 === fd is cloud
+04-12 16:53:50.378   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVQueueTitle
+04-12 16:53:50.379   12013-13816   C02b2b/PlayerImpl               com.opens...is.music  I     #197 PlayerImpl:0x1F9F18 SetSourceTask dupFd
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:50.380   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVQueueItems
+04-12 16:53:50.382   12013-13523   C02b2b/AVPlayerCallback         com.opens...is.music  I     #869 0x507798 Instance OnStateChanged is called, current state: 2
+04-12 16:53:50.382   12013-13523   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3557 0xF52C00 notify initialized
+04-12 16:53:50.382   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     player state changed: session=1, state=initialized, loadedTrackId=source-1775983601308
+04-12 16:53:50.382   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #304 JsPrepare In
+04-12 16:53:50.382   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #321 0xF52C00 JsPrepare EnqueueTask In
+04-12 16:53:50.382   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #323 0xF52C00 JsPrepare EnqueueTask out
+04-12 16:53:50.382   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #339 0xF52C00 JsPrepare Out
+04-12 16:53:50.383   12013-13587   C02b2b/AVPlayerNapi             com.opens...is.music  I     #330 Wait Prepare Task Start
+04-12 16:53:50.383   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #265 0xF52C00 Prepare Task In
+04-12 16:53:50.394   12013-13523   C02b2b/AVPlayerCallback         com.opens...is.music  I     #1032 0x507798 OnDurationUpdateCb is called, duration: 264600
+04-12 16:53:50.394   12013-13523   C02b2b/AVPlayerCallback         com.opens...is.music  I     #1143 0x507798 OnVideoSizeChangedCb is called, width = 0, height = 0
+04-12 16:53:50.394   12013-13523   C02b2b/AVPlayerCallback         com.opens...is.music  W     #1150 can not find video size changed callback!
+04-12 16:53:50.394   12013-13523   C02b2b/AVPlayerCallback         com.opens...is.music  I     #869 0x507798 Instance OnStateChanged is called, current state: 4
+04-12 16:53:50.394   12013-13523   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3557 0xF52C00 notify prepared
+04-12 16:53:50.394   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #291 0xF52C00 Prepare Task Out
+04-12 16:53:50.394   12013-13587   C02b2b/AVPlayerNapi             com.opens...is.music  I     #334 Wait Prepare Task End
+04-12 16:53:50.394   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AVSessionEventHandler]construct
+04-12 16:53:50.394   12013-12013   C02b91/AVSession                com.opens...is.music  I     [AVSessionPostTask]AVSessionEventHandler create new: SetAVPlaybackState
+04-12 16:53:50.394   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVPlayback
+04-12 16:53:50.394   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     player state changed: session=1, state=prepared, loadedTrackId=source-1775983601308
+04-12 16:53:50.394   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #388 JsPlay In
+04-12 16:53:50.394   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #409 0xF52C00 JsPlay EnqueueTask In
+04-12 16:53:50.394   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #411 0xF52C00 JsPlay EnqueueTask Out
+04-12 16:53:50.394   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #346 0xF52C00 Play Task In
+04-12 16:53:50.395   12013-13816   C02b2b/MonitorClientObject      com.opens...is.music  I     #30 0x4105A0 EnableMonitor
+04-12 16:53:50.395   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #429 0xF52C00 JsPlay Out
+04-12 16:53:50.395   12013-13816   C02b2b/MonitorClient            com.opens...is.music  I     #83 0x4105A0 StartClick
+04-12 16:53:50.395   12013-13585   C02b2b/AVPlayerNapi             com.opens...is.music  I     #420 Wait JsPlay Task Start
+04-12 16:53:50.396   12013-13836   C02b91/AVSession                com.opens...is.music  I     [SetAVPlaybackState]SetAVPlaybackState:3.
+04-12 16:53:50.447   12013-13523   C02b2b/AVPlayerCallback         com.opens...is.music  I     #869 0x507798 Instance OnStateChanged is called, current state: 5
+04-12 16:53:50.447   12013-13523   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3557 0xF52C00 notify playing
+04-12 16:53:50.447   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #376 0xF52C00 Play Task Out
+04-12 16:53:50.447   12013-13585   C02b2b/AVPlayerNapi             com.opens...is.music  I     #424 Wait JsPlay Task End
+04-12 16:53:50.447   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     player state changed: session=1, state=playing, loadedTrackId=source-1775983601308
+04-12 16:53:50.448   12013-12013   C01350/WantAgent                com.opens...is.music  I     [napi_want_agent1304]on get wantAgent
+04-12 16:53:50.448   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVPlayback
+04-12 16:53:50.448   12013-13836   C02b91/AVSession                com.opens...is.music  I     [SetAVPlaybackState]SetAVPlaybackState:2.
+04-12 16:53:50.449   12013-12013   C01711/CONTINUOUS_TASK          com.opens...is.music  I     [GetModes:533] GetBackgroundMode audioPlayback.
+04-12 16:53:50.453   12013-13587   C01711/CONTINUOUS_TASK          com.opens...is.music  I     [StartBackgroundRunningExecuteCB:301] notification -1, continuousTaskId 7
+04-12 16:53:50.455   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     startBackgroundTask succeeded: notificationId=-1, slotType=4, contentType=8
+04-12 16:53:50.498   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVPlayback
+04-12 16:53:50.499   12013-13836   C02b91/AVSession                com.opens...is.music  I     [SetAVPlaybackState]SetAVPlaybackState:2.
+04-12 16:53:50.598   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVPlayback
+04-12 16:53:50.598   12013-13836   C02b91/AVSession                com.opens...is.music  I     [SetAVPlaybackState]SetAVPlaybackState:2.
+04-12 16:53:52.009   12013-13894   C01719/ffrt                     com.opens...is.music  W     9:RecordSymbolAndBacktrace:397 Process:com.opensource.metis.music,Tid:13539,Qos:2,CWorker:5,EWorker:1,SWorker:4,TaskType:0,timeout:10s
+04-12 16:53:52.010   12013-13894   C01719/ffrt                     com.opens...is.music  W     10:RecordSymbolAndBacktrace:405 Tid:13539, Name:OS_FFRT_2_0
+                                                                                               #00 pc 000000000016b378 /lib/ld-musl-aarch64.so.1
+                                                                                               #01 pc 000000000005a7c8 /system/lib64/libpreload_native_rust.z.so
+                                                                                               #02 pc 000000000005a564 /system/lib64/libpreload_native_rust.z.so
+                                                                                               #03 pc 00000000000508f8 /system/lib64/libpreload_native_rust.z.so
+                                                                                               #04 pc 00000000000bfd04 /system/lib64/ndk/libffrt.so
+                                                                                               #05 pc 0000000000077900 /system/lib64/ndk/libffrt.so
+04-12 16:53:53.181   12013-12013   C02805/ClientMsgHandler         com.opens...is.music  W     [K:D:322][OnKeyEvent:158] The client receives a key, Fd:42
+04-12 16:53:53.181   12013-12013   C02805/InputManagerImpl         com.opens...is.music  I     [K:D:322][OnKeyEvent:582] id:322 recv
+04-12 16:53:53.181   12013-12013   C04213/InputKeyFlow             com.opens...is.music  I     HandleInputEvent: eid:0,InputId:322,wid:44
+04-12 16:53:53.181   12013-12013   C0420c/WMSEvent                 com.opens...is.music  I     HandleKeyEvent: DispatchKeyEvent ret:48, id:322
+04-12 16:53:53.181   12013-12013   C0420c/WMSEvent                 com.opens...is.music  I     DispatchKeyEventCallback: id: 322, consumed: 0,escTrigger: 0, escDown: 0
+04-12 16:53:53.196   12013-13535   C0420a/WMSLife                  com.opens...is.music  I     NotifyLifecyclePausedStatus: in
+04-12 16:53:53.196   12013-13535   C0420a/WMSLife                  com.opens...is.music  I     NotifyAfterLifecyclePaused: in
+04-12 16:53:53.197   12013-13535   C04207/WMSFocus                 com.opens...is.music  I     UpdateFocusState: focus: 0, id: 44
+04-12 16:53:53.197   12013-13535   C03900/Ace                      com.opens...is.music  I     [(-1:100000:singleton)] [com.opensource.metis.music][entry][100000]: window unfocus
+04-12 16:53:53.198   12013-13535   C04207/WMSFocus                 com.opens...is.music  I     NotifyHighlightChange: windowId: 44, isHighlight: 0,
+04-12 16:53:53.198   12013-13535   C03900/Ace                      com.opens...is.music  I     [(-1:100000:singleton)] [com.opensource.metis.music][entry][100000]:window unactive
+04-12 16:53:53.200   12013-13535   C01332/UIAbility                com.opens...is.music  I     [ui_ability_thread317]name:EntryAbility,targeState:6,isNewWant:0
+04-12 16:53:53.202   12013-12013   C03900/Ace                      com.opens...is.music  I     [(100000:100000:scope)] Update application state , state: ON_INACTIVE
+04-12 16:53:53.202   12013-12013   C0391c/AceFocus                 com.opens...is.music  I     [(100000:100000:scope)] Window: 44 lost focus.
+04-12 16:53:53.202   12013-12013   C0391d/AceMouse                 com.opens...is.music  I     [(100000:100000:scope)] VsyncMouseFormat mouseFormat_ and lastVsyncMouseFormat_ = 0 is same.
+04-12 16:53:53.202   12013-12013   C0391c/AceFocus                 com.opens...is.music  I     [(100000:100000:scope)] Scope(Stack/5) has no last focusNode.
+04-12 16:53:53.202   12013-12013   C03900/Ace                      com.opens...is.music  I     [(100000:100000:scope)] Update application state , state: ON_INACTIVE
+04-12 16:53:53.202   12013-12013   C01332/UIAbility                com.opens...is.music  I     [ui_ability_thread236]Lifecycle:name EntryAbility
+04-12 16:53:53.202   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     GoPause: in
+04-12 16:53:53.202   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     Pause: in, isColdStart: 0
+04-12 16:53:53.202   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     NotifyAfterLifecyclePaused: in
+04-12 16:53:53.202   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     NotifyAfterLifecyclePaused: window has been in noninteractive status
+04-12 16:53:53.202   12013-12013   C01332/UIAbility                com.opens...is.music  I     [JUA1854]JsUIAbility call js, name: onWillBackground
+04-12 16:53:53.202   12013-12013   C01332/UIAbility                com.opens...is.music  I     [JUA1899]end, name: onWillBackground, time: 0
+04-12 16:53:53.202   12013-12013   C01332/UIAbility                com.opens...is.music  I     [JUA1854]JsUIAbility call js, name: onBackground
+04-12 16:53:53.202   12013-12013   A00000/testTag                  com.opens...is.music  I     Ability onBackground
+04-12 16:53:53.202   12013-12013   C01332/UIAbility                com.opens...is.music  I     [JUA1899]end, name: onBackground, time: 0
+04-12 16:53:53.202   12013-12013   C04202/WMSMain                  com.opens...is.music  I     GoBackground: reason: 4
+04-12 16:53:53.202   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     Hide: Window hide [id:44, type: 1, reason:4, state:2, requestState:2
+04-12 16:53:53.202   12013-12013   C01332/UIAbility                com.opens...is.music  I     [ui_ability_impl469]wnd call, AfterBackground
+04-12 16:53:53.206   12013-12013   C0420a/WMSLife                  com.opens...is.music  W     GetAttachStateSyncResult: lifecycleCallback is null
+04-12 16:53:53.206   12013-12013   C03900/Ace                      com.opens...is.music  I     [(-2:100000:singleton)] [com.opensource.metis.music][entry][100000]: window background
+04-12 16:53:53.206   12013-12013   C03900/Ace                      com.opens...is.music  I     [(100000:100000:scope)] Update application state , state: ON_HIDE
+04-12 16:53:53.206   12013-12013   C03922/AceNavigation            com.opens...is.music  I     [(100000:100000:scope)] can't find inner navigation
+04-12 16:53:53.206   12013-12013   C03f00/ArkCompiler              com.opens...is.music  I     [gc] HintGC degree:0 reason:Trigger by ArkUI
+04-12 16:53:53.207   12013-12013   C03f00/ArkCompiler              com.opens...is.music  I     [gc]  MemoryReduceDegree::LOW TriggerConcurrentMark.
+04-12 16:53:53.209   12013-12013   C01406/OHOS::RS                 com.opens...is.music  I     RSSurfaceNode::SetAbilityState, surfaceNodeId:[51595442126850], ability state: background
+04-12 16:53:53.213   12013-12013   C04202/WMSMain                  com.opens...is.music  I     SetFrameRateLinkerEnable: rate 0, linkerId 51595442126848
+04-12 16:53:53.237   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     NotifyAfterDidBackground: reason: 4
+04-12 16:53:53.238   12013-12013   C04208/WMSLayout                com.opens...is.music  I     NotifyWindowStatusChange: id:44, windowMode:1, windowStatus:3, lastWindowStatus:1, skipRedundantWindowStatusNotifications:0
+04-12 16:53:53.238   12013-12013   C04208/WMSLayout                com.opens...is.music  I     NotifyWindowStatusDidChange: Id:44, WindowMode:1, windowStatus:3, lastWindowStatus:1, listenerSize:0, rect:[0 0 1320 2848]
+04-12 16:53:53.238   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     Hide: Window hide success [id:44, type: 1
+04-12 16:53:53.238   12013-12013   C02d07/ObserverMgr              com.opens...is.music  I     start to handle background
+04-12 16:53:53.238   12013-12013   C02805/ClientMsgHandler         com.opens...is.music  W     [K:U:324][OnKeyEvent:158] The client receives a key, Fd:42
+04-12 16:53:53.238   12013-12013   C02805/InputManagerImpl         com.opens...is.music  I     [K:U:324][OnKeyEvent:582] id:324 recv
+04-12 16:53:53.238   12013-12013   C04213/InputKeyFlow             com.opens...is.music  I     HandleInputEvent: eid:1,InputId:324,wid:44
+04-12 16:53:53.238   12013-12013   C0391c/AceFocus                 com.opens...is.music  I     [(100000:100000:scope)] node: page/2 cannot handle key event because is not current focus
+04-12 16:53:53.238   12013-12013   C0420c/WMSEvent                 com.opens...is.music  I     HandleKeyEvent: DispatchKeyEvent ret:48, id:324
+04-12 16:53:53.238   12013-12013   C0391c/AceFocus                 com.opens...is.music  I     [(100000:100000:scope)] node: page/2 cannot handle key event because is not current focus
+04-12 16:53:53.238   12013-12013   C0420c/WMSEvent                 com.opens...is.music  I     DispatchKeyEventCallback: id: 324, consumed: 0,escTrigger: 0, escDown: 0
+04-12 16:53:53.240   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13542 apply qos failed, errno = 4
+04-12 16:53:53.241   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13544 apply qos failed, errno = 4
+04-12 16:53:53.242   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13543 apply qos failed, errno = 4
+04-12 16:53:53.244   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13542 apply qos failed, errno = 4
+04-12 16:53:53.246   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13544 apply qos failed, errno = 4
+04-12 16:53:53.247   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13543 apply qos failed, errno = 4
+04-12 16:53:53.247   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     applyAVSessionMetadata: liveViewUnavailable=true, compact=false, title=词：古小力/黄淩嘉, subtitle=花海, singleLyric=词：古小力/黄淩嘉
+04-12 16:53:53.247   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVMetaData
+04-12 16:53:53.247   12013-13586   C02b91/AVSession                com.opens...is.music  I     [doMetaDataSetNapi]do metadata set with check uri alive:0, pixel alive:0, session alive:1
+04-12 16:53:53.247   12013-12013   C0420a/WMSLife                  com.opens...is.music  I     NotifyAfterDidBackground execute
+04-12 16:53:53.247   12013-13586   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]SetAVMetaData in proxy
+04-12 16:53:53.247   12013-12013   C01332/UIAbility                com.opens...is.music  I     [JUA1854]JsUIAbility call js, name: onDidBackground
+04-12 16:53:53.247   12013-13586   C02b91/AVSession                com.opens...is.music  E     [WriteToParcel]isImageValid,checkFail!ret:true
+04-12 16:53:53.247   12013-12013   C01332/UIAbility                com.opens...is.music  I     [JUA1899]end, name: onDidBackground, time: 0
+04-12 16:53:53.247   12013-13932   C02b91/AVSession                com.opens...is.music  I     [AVQueueImgDownloadSyncExecutor]doAVQueueImgDownload:source-1775983601308
+04-12 16:53:53.247   12013-13932   C02b91/AVSession                com.opens...is.music  E     [AVQueueImgDownloadSyncExecutor]avqImg not match download conditions
+04-12 16:53:53.248   12013-12013   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #130 0x34DB80 Destructor
+04-12 16:53:53.248   12013-12013   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #130 0x34D880 Destructor
+04-12 16:53:53.248   12013-13933   C02b2d/MetaHelperImpl           com.opens...is.music  I     #1035 0xDFDDE8 Release
+04-12 16:53:53.248   12013-13933   C02b2d/MetaHelperImpl           com.opens...is.music  E     #1036 avmetadatahelper service does not exist.
+04-12 16:53:53.248   12013-13933   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #56 0x34DB80 Instances destroy
+04-12 16:53:53.248   12013-13586   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]set avmetadata done
+04-12 16:53:53.248   12013-13586   C02b91/AVSession                com.opens...is.music  E     [doMetaDataSetNapi]do metadata set with img uri empty
+04-12 16:53:53.248   12013-13586   C02b91/AVSession                com.opens...is.music  I     [operator()]doMetaDataSet res:0|1
+04-12 16:53:53.248   12013-12013   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #130 0x40FB00 Destructor
+04-12 16:53:53.248   12013-12013   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #130 0x40F8C0 Destructor
+04-12 16:53:53.248   12013-12013   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #130 0x1D4CC0 Destructor
+04-12 16:53:53.249   12013-13937   C02b2d/MetaHelperImpl           com.opens...is.music  I     #1035 0x5816F8 Release
+04-12 16:53:53.249   12013-13937   C02b2d/MetaHelperImpl           com.opens...is.music  E     #1036 avmetadatahelper service does not exist.
+04-12 16:53:53.249   12013-13937   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #56 0x1D4CC0 Instances destroy
+04-12 16:53:53.249   12013-13936   C02b2d/MetaHelperImpl           com.opens...is.music  I     #1035 0x581FB8 Release
+04-12 16:53:53.249   12013-13936   C02b2d/MetaHelperImpl           com.opens...is.music  E     #1036 avmetadatahelper service does not exist.
+04-12 16:53:53.249   12013-13936   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #56 0x40F8C0 Instances destroy
+04-12 16:53:53.249   12013-13935   C02b2d/MetaHelperImpl           com.opens...is.music  I     #1035 0xDFB5A8 Release
+04-12 16:53:53.249   12013-13935   C02b2d/MetaHelperImpl           com.opens...is.music  E     #1036 avmetadatahelper service does not exist.
+04-12 16:53:53.249   12013-13935   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #56 0x40FB00 Instances destroy
+04-12 16:53:53.249   12013-13934   C02b2d/MetaHelperImpl           com.opens...is.music  I     #1035 0xDFCE98 Release
+04-12 16:53:53.249   12013-13934   C02b2d/MetaHelperImpl           com.opens...is.music  E     #1036 avmetadatahelper service does not exist.
+04-12 16:53:53.249   12013-13934   C02b2d/AVMetadataExtractorNapi  com.opens...is.music  I     #56 0x34D880 Instances destroy
+04-12 16:53:53.928   12013-12013   C01317/AppKit                   com.opens...is.music  I     [MAINTHD2738]start
+04-12 16:53:53.928   12013-12013   C03f00/ArkCompiler              com.opens...is.music  I     [gc] app is inBackground
+04-12 16:53:53.931   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13542 leave qos failed, errno = 4
+04-12 16:53:53.932   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13544 leave qos failed, errno = 4
+04-12 16:53:53.933   12013-12013   C01707/CONCUR                   com.opens...is.music  E     [Interface] task 13543 leave qos failed, errno = 4
+04-12 16:53:53.933   12013-12013   C03f01/NAPI                     com.opens...is.music  I     [StopIdleMonitorTimerTask] Get timerMutex_
+04-12 16:53:54.934   12013-13547   C02d10/HiViewRemoteService      com.opens...is.music  I     GetHiViewRemoteService: refresh remote service instance.
+04-12 16:53:54.935   12013-12013   C03f00/ArkCompiler              com.opens...is.music  I     [gc] IdleGCTrigger: trigger full gc
+04-12 16:53:55.612   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     applyAVSessionMetadata: liveViewUnavailable=true, compact=false, title=曲：周杰伦, subtitle=花海, singleLyric=曲：周杰伦
+04-12 16:53:55.613   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVMetaData
+04-12 16:53:55.613   12013-13588   C02b91/AVSession                com.opens...is.music  I     [doMetaDataSetNapi]do metadata set with check uri alive:0, pixel alive:0, session alive:1
+04-12 16:53:55.613   12013-13588   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]SetAVMetaData in proxy
+04-12 16:53:55.613   12013-14006   C02b91/AVSession                com.opens...is.music  I     [AVQueueImgDownloadSyncExecutor]doAVQueueImgDownload:source-1775983601308
+04-12 16:53:55.613   12013-14006   C02b91/AVSession                com.opens...is.music  E     [AVQueueImgDownloadSyncExecutor]avqImg not match download conditions
+04-12 16:53:55.613   12013-13588   C02b91/AVSession                com.opens...is.music  E     [WriteToParcel]isImageValid,checkFail!ret:true
+04-12 16:53:55.613   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVPlayback
+04-12 16:53:55.613   12013-13836   C02b91/AVSession                com.opens...is.music  I     [SetAVPlaybackState]SetAVPlaybackState:2.
+04-12 16:53:55.613   12013-13588   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]set avmetadata done
+04-12 16:53:55.613   12013-13588   C02b91/AVSession                com.opens...is.music  E     [doMetaDataSetNapi]do metadata set with img uri empty
+04-12 16:53:55.613   12013-13588   C02b91/AVSession                com.opens...is.music  I     [operator()]doMetaDataSet res:0|1
+04-12 16:53:58.124   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     applyAVSessionMetadata: liveViewUnavailable=true, compact=false, title=编曲：黄雨勋, subtitle=花海, singleLyric=编曲：黄雨勋
+04-12 16:53:58.124   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVMetaData
+04-12 16:53:58.124   12013-14050   C02b91/AVSession                com.opens...is.music  I     [AVQueueImgDownloadSyncExecutor]doAVQueueImgDownload:source-1775983601308
+04-12 16:53:58.124   12013-14050   C02b91/AVSession                com.opens...is.music  E     [AVQueueImgDownloadSyncExecutor]avqImg not match download conditions
+04-12 16:53:58.124   12013-13586   C02b91/AVSession                com.opens...is.music  I     [doMetaDataSetNapi]do metadata set with check uri alive:0, pixel alive:0, session alive:1
+04-12 16:53:58.124   12013-13586   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]SetAVMetaData in proxy
+04-12 16:53:58.124   12013-13586   C02b91/AVSession                com.opens...is.music  E     [WriteToParcel]isImageValid,checkFail!ret:true
+04-12 16:53:58.124   12013-13586   C02b91/AVSession                com.opens...is.music  I     [SetAVMetaData]set avmetadata done
+04-12 16:53:58.124   12013-13586   C02b91/AVSession                com.opens...is.music  E     [doMetaDataSetNapi]do metadata set with img uri empty
+04-12 16:53:58.124   12013-13586   C02b91/AVSession                com.opens...is.music  I     [operator()]doMetaDataSet res:0|1
+04-12 16:53:59.680   12013-13836   C02b91/AVSession                com.opens...is.music  I     [HandleEvent]send control command 1 to session with callback size 1
+04-12 16:53:59.680   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #466 JsPause In
+04-12 16:53:59.680   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #482 0xF52C00 JsPause EnqueueTask In
+04-12 16:53:59.680   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #484 0xF52C00 JsPause EnqueueTask Out
+04-12 16:53:59.680   12013-12013   C02b2b/AVPlayerNapi             com.opens...is.music  I     #500 0xF52C00 JsPause Out
+04-12 16:53:59.680   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #436 0xF52C00 Pause Task In
+04-12 16:53:59.681   12013-13585   C02b2b/AVPlayerNapi             com.opens...is.music  I     #491 Wait JsPause Task Start
+04-12 16:53:59.684   12013-13816   C02b2b/MonitorClient            com.opens...is.music  I     #113 0x4105A0 StopClick
+04-12 16:53:59.684   12013-13837   C02b2b/MonitorClient            com.opens...is.music  I     #152 0x2819B8 objSet empty.
+04-12 16:53:59.684   12013-13837   C02b2b/MonitorClient            com.opens...is.music  I     #167 0x2819B8 ClickThread End
+04-12 16:53:59.684   12013-13837   C02b2b/MonitorClient            com.opens...is.music  I     #181 objSetsize 0, clientDestroy 0.
+04-12 16:53:59.709   12013-13523   C02b2b/AVPlayerCallback         com.opens...is.music  I     #869 0x507798 Instance OnStateChanged is called, current state: 6
+04-12 16:53:59.709   12013-13523   C02b2b/AVPlayerNapi             com.opens...is.music  I     #3557 0xF52C00 notify paused
+04-12 16:53:59.709   12013-13816   C02b2b/AVPlayerNapi             com.opens...is.music  I     #454 0xF52C00 Pause Task Out
+04-12 16:53:59.709   12013-13585   C02b2b/AVPlayerNapi             com.opens...is.music  I     #495 Wait JsPause Task End
+04-12 16:53:59.711   12013-12013   A03d00/JSAPP                    com.opens...is.music  I     player state changed: session=1, state=paused, loadedTrackId=source-1775983601308
+04-12 16:53:59.711   12013-12013   C03f01/NAPI                     com.opens...is.music  I     ID: 0, cnt: 1
+04-12 16:53:59.711   12013-12013   C03f01/NAPI                     com.opens...is.music  I     ID: 1, cnt: 2
+04-12 16:53:59.711   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVPlayback
+04-12 16:53:59.711   12013-13836   C02b91/AVSession                com.opens...is.music  I     [SetAVPlaybackState]SetAVPlaybackState:3.
+04-12 16:53:59.713   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVQueueTitle
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [GetAssetId]MediaDescription has assetId
+04-12 16:53:59.717   12013-12013   C02b91/AVSession                com.opens...is.music  I     [Enqueue]name=SetAVQueueItems

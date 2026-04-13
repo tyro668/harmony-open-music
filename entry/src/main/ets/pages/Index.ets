@@ -111,14 +111,12 @@ import {
   resolveAppThemeAppearance
 } from '../utils/ThemeUtils';
 import {
-  activatePersistedReadUriPermissions,
   appendPlaybackRecord,
   deleteMusicSourceScript as deletePersistedMusicSourceScript,
   ensureAppDatabase,
   PlaybackRecordEntry,
   persistAppState as savePersistedAppState,
   persistAppStateSync as savePersistedAppStateSync,
-  persistReadUriPermissions,
   readMusicSourceScript,
   restorePersistedAppState
 } from '../services/AppStatePersistenceService';
@@ -2174,8 +2172,7 @@ struct Index {
     } finally {
       this.isRestoringState = false;
     }
-    // Run URI activation and metadata extraction in parallel, non-blocking
-    void this.activatePersistedUriPermissions();
+    // Run metadata extraction, non-blocking
     this.syncTrackMetadataCaches();
   }
 
@@ -2973,22 +2970,6 @@ struct Index {
     this.showToast('未匹配到可用歌词，请查看日志确认歌曲信息');
   }
 
-  private async persistUriPermissions(uris: Array<string>): Promise<void> {
-    let persisted = await persistReadUriPermissions(uris);
-    if (!persisted) {
-      this.showToast('已导入歌曲，但系统未保存文件授权');
-    }
-  }
-
-  private async activatePersistedUriPermissions(): Promise<void> {
-    let trackUris = this.localTracks.filter((track: MusicTrack) => track.sourceUri.length > 0)
-      .map((track: MusicTrack) => track.sourceUri);
-    if (trackUris.length === 0) {
-      return;
-    }
-    await activatePersistedReadUriPermissions(trackUris);
-  }
-
   private schedulePersistState(): void {
     if (this.isRestoringState || !this.hasInitializedState) {
       return;
@@ -3248,17 +3229,43 @@ struct Index {
         return;
       }
 
+      let importDir = `${context.filesDir}/imports`;
+      try {
+        if (!fs.accessSync(importDir)) {
+          fs.mkdirSync(importDir, true);
+        }
+      } catch (_) {
+      }
+
       let mergedTracks = this.localTracks.slice();
       let importedCount = 0;
-      let newUris: Array<string> = [];
-      uris.forEach((uri: string) => {
-        let duplicated = mergedTracks.some((track: MusicTrack) => track.sourceUri === uri);
-        if (!duplicated) {
-          mergedTracks.push(buildImportedTrack(uri, mergedTracks.length));
-          importedCount += 1;
-          newUris.push(uri);
+      for (let uri of uris) {
+        let uriObj = new fileUri.FileUri(uri);
+        let fileName = uriObj.name;
+        let targetPath = `${importDir}/${Date.now()}-${sanitizeFileName(fileName)}`;
+        let duplicated = mergedTracks.some((track: MusicTrack) =>
+          track.sourceUri === uri || (track.filePath.length > 0 && track.filePath === targetPath));
+        if (duplicated) {
+          continue;
         }
-      });
+        try {
+          let srcFile = fs.openSync(uri, fs.OpenMode.READ_ONLY);
+          try {
+            let dstFile = fs.openSync(targetPath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY);
+            try {
+              fs.copyFileSync(srcFile.fd, dstFile.fd);
+            } finally {
+              fs.closeSync(dstFile);
+            }
+          } finally {
+            fs.closeSync(srcFile);
+          }
+          mergedTracks.push(buildImportedTrack(uri, mergedTracks.length, targetPath));
+          importedCount += 1;
+        } catch (copyError) {
+          console.error(`copy file failed for ${uri}: ${JSON.stringify(copyError)}`);
+        }
+      }
 
       this.localTracks = mergedTracks;
       this.syncTrackMetadataCaches();
@@ -3266,7 +3273,6 @@ struct Index {
       this.activeLibraryDimension = LibraryDimension.Song;
       this.activeMainTab = MainTab.Home;
       this.syncCurrentTrackSelection();
-      await this.persistUriPermissions(newUris);
       this.schedulePersistState();
       if (importedCount > 0) {
         this.showToast(`已导入 ${importedCount} 首本地音乐`);

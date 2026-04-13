@@ -138,9 +138,9 @@ export function buildDownloadedTrack(filePath: string, downloadUrl: string, curr
   };
 }
 
-export function buildImportedTrack(uri: string, currentCount: number): MusicTrack {
+export function buildImportedTrack(uri: string, currentCount: number, localFilePath?: string): MusicTrack {
   let uriObject = new fileUri.FileUri(uri);
-  let realPath = uriObject.path;
+  let realPath = localFilePath ?? uriObject.path;
   let rawName = uriObject.name;
   let fileName = safeDecode(rawName);
   let baseName = removeExtension(fileName);
@@ -159,7 +159,7 @@ export function buildImportedTrack(uri: string, currentCount: number): MusicTrac
     album: album,
     durationMs: 0,
     folder: folderFromPath(realPath),
-    sourceUri: uri,
+    sourceUri: localFilePath !== undefined ? '' : uri,
     filePath: realPath,
     rawFileName: '',
     accentColor: colorForSeed(uri),
