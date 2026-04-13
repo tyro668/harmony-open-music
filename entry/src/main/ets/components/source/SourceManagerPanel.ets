@@ -1,5 +1,6 @@
 import { AppThemeAppearance, MusicSourceConfig, MusicSourceQuality } from '../../models/AppModels';
 import { sourceDisplayName } from '../../utils/MusicSourceUtils';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
@@ -27,12 +28,12 @@ export struct SourceManagerPanel {
     Column() {
       Column() {
         Row() {
-          Text('音源管理')
+          Text(t('source.manager_title'))
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.theme().primaryText)
           Blank()
-          Text('关闭')
+          Text(t('common.close'))
             .fontSize(15)
             .fontColor(this.theme().accent)
             .onClick(() => {
@@ -43,13 +44,13 @@ export struct SourceManagerPanel {
         .padding({ left: 24, right: 24, top: 24, bottom: 16 })
 
         Column({ space: 12 }) {
-          Text('导入洛雪音乐自定义音源脚本，支持本地 .js 文件或远程 URL。')
+          Text(t('source.manager_desc'))
             .fontSize(12)
             .fontColor(this.theme().secondaryText)
             .lineHeight(18)
             .width('100%')
 
-          Button(this.addSourceLoading ? '导入中...' : '从本地文件导入')
+          Button(this.addSourceLoading ? t('common.loading') : t('source.import_from_file'))
             .width('100%')
             .height(42)
             .fontSize(15)
@@ -63,7 +64,7 @@ export struct SourceManagerPanel {
             })
 
           Row({ space: 8 }) {
-            TextInput({ placeholder: '输入音源脚本 URL', text: this.sourceUrlInput })
+            TextInput({ placeholder: t('source.url_placeholder'), text: this.sourceUrlInput })
               .height(42)
               .fontSize(14)
               .fontColor(this.theme().primaryText)
@@ -77,9 +78,9 @@ export struct SourceManagerPanel {
               .onChange((value: string) => {
                 this.onSourceUrlChange(value);
               })
-            Button(this.addSourceLoading ? '...' : '导入')
+            Button(this.addSourceLoading ? t('common.loading') : t('common.import'))
               .height(42)
-              .width(72)
+              .width(96)
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
               .backgroundColor(this.theme().accentSoftBackground)
@@ -99,11 +100,11 @@ export struct SourceManagerPanel {
           Column({ space: 0 }) {
             if (this.musicSources.length === 0) {
               Column({ space: 10 }) {
-                Text('暂无音源')
+                Text(t('source.no_source'))
                   .fontSize(18)
                   .fontWeight(FontWeight.Medium)
                   .fontColor(this.theme().secondaryText)
-                Text('请导入洛雪音乐自定义音源 .js 脚本')
+                Text(t('source.no_source_hint'))
                   .fontSize(13)
                   .fontColor(this.theme().tertiaryText)
               }
@@ -135,12 +136,12 @@ export struct SourceManagerPanel {
                       .fontColor(this.theme().secondaryText)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    Text(`子源: ${source.musicSources.map((item: MusicSourceQuality) => sourceDisplayName(item.source)).join(', ')}`)
+                    Text(t('source.sub_source', source.musicSources.map((item: MusicSourceQuality) => sourceDisplayName(item.source)).join(', ')))
                       .fontSize(11)
                       .fontColor(this.theme().tertiaryText)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    Text(`更新提醒: ${source.allowShowUpdateAlert ? '开启' : '关闭'}`)
+                    Text(t('source.update_alert', source.allowShowUpdateAlert ? t('source.alert_on') : t('source.alert_off')))
                       .fontSize(11)
                       .fontColor(source.allowShowUpdateAlert ? this.theme().accent : this.theme().secondaryText)
                     if (source.homepage.length > 0) {
@@ -155,7 +156,7 @@ export struct SourceManagerPanel {
                   .layoutWeight(1)
 
                   Column({ space: 8 }) {
-                    Text(source.allowShowUpdateAlert ? '关闭提醒' : '开启提醒')
+                    Text(source.allowShowUpdateAlert ? t('source.alert_off') : t('source.alert_on'))
                       .fontSize(12)
                       .fontColor(source.allowShowUpdateAlert ? this.theme().warningText : this.theme().accent)
                       .padding({ left: 12, right: 12, top: 6, bottom: 6 })
@@ -165,7 +166,7 @@ export struct SourceManagerPanel {
                         this.onToggleUpdateAlert(source.id);
                       })
 
-                    Text('删除')
+                    Text(t('common.delete'))
                       .fontSize(13)
                       .fontColor(this.theme().dangerText)
                       .padding({ left: 12, right: 12, top: 6, bottom: 6 })

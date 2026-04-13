@@ -1,4 +1,5 @@
 import { DEFAULT_PLAYBACK_COLLECTION_ID } from '../constants/AppConstants';
+import { t } from '../utils/I18nUtil';
 import {
   CustomPlaylist,
   MusicTrack,
@@ -6,8 +7,8 @@ import {
   PlaybackCollectionSummary
 } from '../models/AppModels';
 
-const UNTITLED_ALBUM_NAME: string = '未命名专辑';
-const UNKNOWN_ARTIST_NAME: string = '未知歌手';
+const UNTITLED_ALBUM_NAME: string = t('collection.unnamed_album');
+const UNKNOWN_ARTIST_NAME: string = t('collection.unknown_artist');
 export const FAVORITES_PLAYBACK_COLLECTION_ID: string = 'builtin:favorites';
 
 interface GroupedCollectionItem {
@@ -67,7 +68,7 @@ function groupedCollectionSummaries(
     return buildCollectionSummary(
       kind === PlaybackCollectionKind.Album ? buildAlbumPlaybackCollectionId(item.key) : buildArtistPlaybackCollectionId(item.key),
       item.key,
-      `${item.count} 首`,
+      `${item.count}${t('common.unit_song')}`,
       item.count,
       kind
     );
@@ -102,8 +103,8 @@ export function allPlaybackCollectionSummary(localTracks: MusicTrack[]): Playbac
   let tracks = allPlaybackTracks(localTracks);
   return buildCollectionSummary(
     DEFAULT_PLAYBACK_COLLECTION_ID,
-    '全部音乐',
-    `${tracks.length} 首`,
+    t('collection.all_music'),
+    `${tracks.length}${t('common.unit_song')}`,
     tracks.length,
     PlaybackCollectionKind.All
   );
@@ -117,8 +118,8 @@ export function favoritePlaybackCollectionSummary(localTracks: MusicTrack[]): Pl
   let tracks = favoritePlaybackTracks(localTracks);
   return buildCollectionSummary(
     FAVORITES_PLAYBACK_COLLECTION_ID,
-    '收藏',
-    `${tracks.length} 首`,
+    t('collection.favorite'),
+    `${tracks.length}${t('common.unit_song')}`,
     tracks.length,
     PlaybackCollectionKind.Favorites
   );
@@ -141,7 +142,7 @@ export function customPlaybackCollectionSummaries(
     return buildCollectionSummary(
       buildCustomPlaybackCollectionId(playlist.id),
       playlist.name,
-      `${count} 首`,
+      `${count}${t('common.unit_song')}`,
       count,
       PlaybackCollectionKind.Custom
     );
@@ -174,18 +175,18 @@ export function playbackCollectionSelectorSummaries(
 
 export function playbackCollectionKindLabel(kind: PlaybackCollectionKind): string {
   if (kind === PlaybackCollectionKind.All) {
-    return '全部';
+    return t('common.all');
   }
   if (kind === PlaybackCollectionKind.Favorites) {
-    return '收藏';
+    return t('collection.favorite');
   }
   if (kind === PlaybackCollectionKind.Album) {
-    return '专辑';
+    return t('collection.album');
   }
   if (kind === PlaybackCollectionKind.Artist) {
-    return '歌手';
+    return t('collection.artist');
   }
-  return '自定义';
+  return t('collection.custom');
 }
 
 export function playbackCollectionTracks(

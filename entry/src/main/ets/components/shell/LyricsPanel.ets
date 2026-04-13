@@ -1,4 +1,5 @@
 import { AppThemeAppearance } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { LyricLine, LyricWord } from '../../utils/LyricsParser';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
@@ -134,12 +135,12 @@ export struct LyricsPanel {
     Column() {
       // Header
       Row() {
-        Text('歌词')
+        Text(t('lyric.title'))
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.theme().primaryText)
         Blank()
-        Text('关闭')
+        Text(t('common.close'))
           .fontSize(14)
           .fontColor(this.theme().accent)
           .fontWeight(FontWeight.Medium)
@@ -152,7 +153,7 @@ export struct LyricsPanel {
 
       if (this.isLoading) {
         Column() {
-          Text('加载歌词中...')
+          Text(t('lyric.loading'))
             .fontSize(15)
             .fontColor(this.theme().tertiaryText)
         }
@@ -161,7 +162,7 @@ export struct LyricsPanel {
         .justifyContent(FlexAlign.Center)
       } else if (this.lyrics.length === 0) {
         Column() {
-          Text('暂无歌词')
+          Text(t('lyric.not_available'))
             .fontSize(15)
             .fontColor(this.theme().tertiaryText)
         }

@@ -1,8 +1,22 @@
 import { MINI_PLACEHOLDER_TRACK } from '../constants/AppConstants';
 import { CollectionMode, MusicTrack } from '../models/AppModels';
+import { t } from './I18nUtil';
 
 export function totalListeningHours(totalListeningMs: number): number {
-  return Math.floor(totalListeningMs / (60 * 60 * 1000));
+  return Math.round((totalListeningMs / (60 * 60 * 1000)) * 10) / 10;
+}
+
+export function totalListeningSummaryText(totalListeningMs: number): string {
+  if (totalListeningMs <= 0) {
+    return t('profile.listening_hours', '0');
+  }
+  if (totalListeningMs < 60 * 60 * 1000) {
+    let minutes = Math.max(1, Math.round(totalListeningMs / (60 * 1000)));
+    return t('profile.listening_minutes', `${minutes}`);
+  }
+  let totalHours = totalListeningHours(totalListeningMs);
+  let displayHours = Number.isInteger(totalHours) ? `${totalHours}` : totalHours.toFixed(1);
+  return t('profile.listening_hours', displayHours);
 }
 
 export function librarySource(localTracks: MusicTrack[]): MusicTrack[] {

@@ -1,4 +1,5 @@
 import { AppThemeAppearance, BaiduPanEntry } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
@@ -37,12 +38,12 @@ export struct BaiduPanImportPanel {
 
   private actionLabel(entry: BaiduPanEntry): string {
     if (this.isImported(entry)) {
-      return '已导入';
+      return t('common.imported');
     }
     if (this.isImporting(entry)) {
-      return '导入中';
+      return t('common.importing');
     }
-    return '导入';
+    return t('common.import');
   }
 
   private actionEnabled(entry: BaiduPanEntry): boolean {
@@ -78,10 +79,10 @@ export struct BaiduPanImportPanel {
 
   private actionBackground(entry: BaiduPanEntry): string {
     let label = this.actionLabel(entry);
-    if (label === '已导入') {
+    if (label === t('common.imported')) {
       return this.theme().successBackground;
     }
-    if (label === '导入中') {
+    if (label === t('common.importing')) {
       return this.theme().accentSoftBackground;
     }
     return this.theme().accent;
@@ -89,10 +90,10 @@ export struct BaiduPanImportPanel {
 
   private actionFontColor(entry: BaiduPanEntry): string {
     let label = this.actionLabel(entry);
-    if (label === '已导入') {
+    if (label === t('common.imported')) {
       return this.theme().successText;
     }
-    if (label === '导入中') {
+    if (label === t('common.importing')) {
       return this.theme().accent;
     }
     return this.theme().onAccent;
@@ -134,12 +135,12 @@ export struct BaiduPanImportPanel {
     Column() {
       Column() {
         Row() {
-          Text('百度网盘导入')
+          Text(t('baidu.import_title'))
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.theme().primaryText)
           Blank()
-          Text('关闭')
+          Text(t('common.close'))
             .fontSize(14)
             .fontColor(this.theme().accent)
             .onClick(() => {
@@ -167,7 +168,7 @@ export struct BaiduPanImportPanel {
                 this.onAppKeyChange(value);
               })
 
-            this.compactAction(this.hasAccessToken() ? '重授' : '授权', this.appKey.trim().length > 0, true, () => {
+            this.compactAction(this.hasAccessToken() ? t('baidu.reauth') : t('baidu.auth'), this.appKey.trim().length > 0, true, () => {
               this.onOpenAuth();
             })
           }
@@ -182,7 +183,7 @@ export struct BaiduPanImportPanel {
               .layoutWeight(1)
 
             if (this.currentDir !== '/') {
-              Text('上一级')
+              Text(t('baidu.parent_dir'))
                 .fontSize(12)
                 .fontColor(this.theme().warningText)
                 .padding({ left: 12, right: 12, top: 6, bottom: 6 })
@@ -193,11 +194,11 @@ export struct BaiduPanImportPanel {
                 })
             }
 
-            this.compactAction('上级', this.currentDir !== '/', false, () => {
+            this.compactAction(t('baidu.parent'), this.currentDir !== '/', false, () => {
               this.onGoParent();
             })
 
-            this.compactAction('刷新', this.hasAccessToken() && !this.isLoading, false, () => {
+            this.compactAction(t('common.refresh'), this.hasAccessToken() && !this.isLoading, false, () => {
               this.onRefresh();
             })
           }
@@ -218,7 +219,7 @@ export struct BaiduPanImportPanel {
           .alignItems(HorizontalAlign.Center)
         } else if (this.accessToken.trim().length === 0) {
           Column() {
-            Text('未授权')
+            Text(t('baidu.not_authorized'))
               .fontSize(15)
               .fontColor(this.theme().secondaryText)
           }
@@ -227,7 +228,7 @@ export struct BaiduPanImportPanel {
           .alignItems(HorizontalAlign.Center)
         } else if (this.entries.length === 0) {
           Column() {
-            Text('空目录')
+            Text(t('baidu.empty_dir'))
               .fontSize(15)
               .fontColor(this.theme().secondaryText)
           }
@@ -258,7 +259,7 @@ export struct BaiduPanImportPanel {
                   .layoutWeight(1)
 
                   if (entry.isDirectory) {
-                    Text('进入')
+                    Text(t('common.enter'))
                       .fontSize(12)
                       .fontColor(this.theme().accent)
                       .padding({ left: 12, right: 12, top: 7, bottom: 7 })

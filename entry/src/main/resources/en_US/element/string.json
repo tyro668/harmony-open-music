@@ -11,6 +11,14 @@
     {
       "name": "EntryAbility_label",
       "value": "Happy Music"
+    },
+    {
+      "name": "bluetooth_reason",
+      "value": "Used to establish Bluetooth connection with car system via HiCar/CarLife for music playback control and display"
+    },
+    {
+      "name": "datasync_reason",
+      "value": "Used to sync app data when casting to car system via HiCar/CarLife"
     }
   ]
 }

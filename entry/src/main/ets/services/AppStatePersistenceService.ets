@@ -287,6 +287,26 @@ async function queryConfigValue(
   }
 }
 
+async function queryPlaybackRecordTotalListeningMs(store: relationalStore.RdbStore): Promise<number> {
+  let predicates = new relationalStore.RdbPredicates(TABLE_PLAYBACK_RECORD);
+  let resultSet = await store.query(predicates, ['listened_ms']);
+  let totalListeningMs = 0;
+  try {
+    if (!resultSet.goToFirstRow()) {
+      return 0;
+    }
+    do {
+      let listenedMs = resultSet.getLong(0);
+      if (listenedMs > 0) {
+        totalListeningMs += listenedMs;
+      }
+    } while (resultSet.goToNextRow());
+  } finally {
+    resultSet.close();
+  }
+  return totalListeningMs;
+}
+
 async function upsertConfigValue(
   store: relationalStore.RdbStore,
   key: string,
@@ -864,6 +884,15 @@ export async function restorePersistedAppState(store: relationalStore.RdbStore):
     }
   } catch (error) {
     console.error(`read listening duration from sqlite failed: ${JSON.stringify(error)}`);
+  }
+
+  try {
+    let playbackRecordListeningMs = await queryPlaybackRecordTotalListeningMs(store);
+    if (playbackRecordListeningMs > restored.totalListeningMs) {
+      restored.totalListeningMs = playbackRecordListeningMs;
+    }
+  } catch (error) {
+    console.error(`read playback record listening duration failed: ${JSON.stringify(error)}`);
   }
 
   try {

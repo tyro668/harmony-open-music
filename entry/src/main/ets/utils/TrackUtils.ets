@@ -1,6 +1,7 @@
 import { fileUri } from '@kit.CoreFileKit';
 
 import { AUDIO_EXTENSIONS, COLOR_PALETTE } from '../constants/AppConstants';
+import { t } from '../utils/I18nUtil';
 import { MusicTrack } from '../models/AppModels';
 
 export function copyTrack(track: MusicTrack): MusicTrack {
@@ -43,11 +44,11 @@ export function removeExtension(fileName: string): string {
 
 export function folderFromPath(path: string): string {
   if (!path || path.length === 0) {
-    return '本地音乐';
+    return t('track.local_music');
   }
   let parts = path.split('/');
   if (parts.length < 2) {
-    return '本地音乐';
+    return t('track.local_music');
   }
   return safeDecode(parts[parts.length - 2]);
 }
@@ -112,7 +113,7 @@ export function buildDownloadedTrack(filePath: string, downloadUrl: string, curr
   }
   let baseName = removeExtension(fileName);
   let title = safeDecode(baseName);
-  let artist = '在线下载';
+  let artist = t('track.online_download');
   let dividerIndex = title.indexOf(' - ');
   if (dividerIndex > 0 && dividerIndex < title.length - 3) {
     artist = title.substring(0, dividerIndex).trim();
@@ -122,9 +123,9 @@ export function buildDownloadedTrack(filePath: string, downloadUrl: string, curr
     id: `online-${currentCount}-${Date.now()}`,
     title: title.length > 0 ? title : fileName,
     artist: artist,
-    album: '网络导入',
+    album: t('track.network_import'),
     durationMs: 0,
-    folder: '在线下载',
+    folder: t('track.online_download'),
     sourceUri: '',
     filePath: filePath,
     rawFileName: '',
@@ -145,7 +146,7 @@ export function buildImportedTrack(uri: string, currentCount: number, localFileP
   let fileName = safeDecode(rawName);
   let baseName = removeExtension(fileName);
   let title = baseName;
-  let artist = '本地导入';
+  let artist = t('track.local_import');
   let dividerIndex = baseName.indexOf(' - ');
   if (dividerIndex > 0 && dividerIndex < baseName.length - 3) {
     artist = baseName.substring(0, dividerIndex).trim();

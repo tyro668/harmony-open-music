@@ -11,6 +11,7 @@ import {
   LIVE_VIEW_ICON_FRAME_PREFIX
 } from '../constants/AppConstants';
 import { MusicTrack, PlaybackCollectionSummary, PlayMode } from '../models/AppModels';
+import { t } from '../utils/I18nUtil';
 
 export async function createPlaybackWantAgent(
   context: common.UIAbilityContext,
@@ -181,8 +182,8 @@ export function applyStoppedLiveViewUpdate(
   liveView.sequence = sequence;
   let clickAction = liveView.liveViewData.primary.clickAction;
   liveView.liveViewData.primary = {
-    title: '播放结束',
-    content: [createLiveViewRichText('可返回应用继续播放')],
+    title: t('playback.notification_title'),
+    content: [createLiveViewRichText(t('playback.notification_content'))],
     keepTime: 0,
     clickAction: clickAction
   };
@@ -192,7 +193,7 @@ export function applyStoppedLiveViewUpdate(
   let capsule: liveViewManager.TextCapsule = {
     type: liveViewManager.CapsuleType.CAPSULE_TYPE_TEXT,
     status: 1,
-    title: '播放结束',
+    title: t('playback.notification_title'),
     backgroundColor: '#FF2A2928'
   };
   if (!compactLayout) {
@@ -292,7 +293,7 @@ export function createPlaybackState(
 }
 
 function queueSubtitle(summary: PlaybackCollectionSummary, activeCollectionId: string): string {
-  let status = summary.id === activeCollectionId ? '当前播放' : '可切换';
+  let status = summary.id === activeCollectionId ? t('playback.now_playing') : t('playback.switchable');
   return `${status} · ${summary.subtitle}`;
 }
 
@@ -316,7 +317,7 @@ export function buildPlaybackCollectionQueueItems(
 }
 
 export function buildPlaybackCollectionQueueTitle(): string {
-  return '选择播放列表';
+  return t('playback.select_collection');
 }
 
 export function buildTrackQueueItems(tracks: MusicTrack[]): avSession.AVQueueItem[] {

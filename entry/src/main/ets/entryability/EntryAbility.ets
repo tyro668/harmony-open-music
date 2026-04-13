@@ -2,6 +2,7 @@ import { AbilityConstant, common, ConfigurationConstant, UIAbility, Want } from 
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { resourceManager } from '@kit.LocalizationKit';
+import { initI18n } from '../utils/I18nUtil';
 
 const DOMAIN = 0x0000;
 const HICAR_BUNDLE = 'com.huawei.hmos.hicar';
@@ -38,6 +39,7 @@ function detectCarMode(want: Want, context: common.UIAbilityContext): void {
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    initI18n();
     try {
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
     } catch (err) {

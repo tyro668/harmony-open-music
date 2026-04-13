@@ -7,6 +7,7 @@ import {
   PersistedMusicSourceConfig
 } from '../models/AppModels';
 import { MUSIC_SOURCE_INFO_LIMITS } from '../constants/AppConstants';
+import { t } from '../utils/I18nUtil';
 
 const SOURCE_QUALITY_PRIORITY: string[] = ['flac24bit', 'flac', '320k', '128k'];
 
@@ -97,7 +98,7 @@ export function normalizeMusicSource(source: PersistedMusicSourceConfig): MusicS
     : [];
   return {
     id: source.id,
-    name: typeof source.name === 'string' && source.name.length > 0 ? source.name : '自定义音源',
+    name: typeof source.name === 'string' && source.name.length > 0 ? source.name : t('source.custom_source'),
     description: typeof source.description === 'string' ? source.description : '',
     author: typeof source.author === 'string' ? source.author : '',
     homepage: typeof source.homepage === 'string' ? source.homepage : '',
@@ -129,7 +130,7 @@ export function parseLxSourceScriptInfo(script: string): Record<string, string> 
   };
   let commentMatch = /^\/\*[\S|\s]+?\*\//.exec(script);
   if (!commentMatch) {
-    throw new Error('无效的自定义源文件');
+    throw new Error(t('source.invalid_file'));
   }
   let infoLines = commentMatch[0].split(/\r?\n/);
   let infoRegex = /^\s?\*\s?@(\w+)\s(.+)$/;
@@ -196,12 +197,12 @@ export function buildSourceTrackImportKey(track: MusicSourceTrack): string {
 }
 
 export function sourceDisplayName(code: string): string {
-  if (code === 'wy') return '网易云';
-  if (code === 'kw') return '酷我';
-  if (code === 'kg') return '酷狗';
-  if (code === 'tx') return 'QQ音乐';
-  if (code === 'mg') return '咪咕';
-  if (code === 'local') return '本地';
+  if (code === 'wy') return t('source.source_wy');
+  if (code === 'kw') return t('source.source_kw');
+  if (code === 'kg') return t('source.source_kg');
+  if (code === 'tx') return t('source.source_tx');
+  if (code === 'mg') return t('source.source_mg');
+  if (code === 'local') return t('source.source_local');
   return code;
 }
 

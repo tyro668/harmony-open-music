@@ -1,5 +1,6 @@
 import { ConfigurationConstant } from '@kit.AbilityKit';
 
+import { t } from '../utils/I18nUtil';
 import { AppThemeAppearance, AppThemeMode } from '../models/AppModels';
 
 export interface AppThemePalette {
@@ -183,10 +184,10 @@ export function appThemeModeToColorMode(mode: AppThemeMode): ConfigurationConsta
 
 export function appThemeModeLabel(mode: AppThemeMode): string {
   if (mode === AppThemeMode.Dark) {
-    return '深色';
+    return t('theme.dark');
   }
   if (mode === AppThemeMode.System) {
-    return '跟随系统';
+    return t('theme.system');
   }
-  return '浅色';
+  return t('theme.light');
 }

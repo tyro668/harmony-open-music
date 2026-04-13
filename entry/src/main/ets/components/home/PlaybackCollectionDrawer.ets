@@ -5,6 +5,7 @@ import {
   PlaybackCollectionKind,
   PlaybackCollectionSummary
 } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { customPlaylistIdFromCollectionId, isCustomPlaybackCollectionId } from '../../utils/PlaybackCollectionUtils';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
@@ -106,12 +107,12 @@ export struct PlaybackCollectionDrawer {
   @Builder
   private drawerHeader() {
     Row() {
-      Text('播放列表')
+      Text(t('collection.play_queue'))
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.theme().primaryText)
       Blank()
-      Text('关闭')
+      Text(t('common.close'))
         .fontSize(14)
         .fontColor(this.theme().accent)
         .onClick(() => {
@@ -227,14 +228,14 @@ export struct PlaybackCollectionDrawer {
         })
 
         Column({ space: 2 }) {
-          Text('按专辑分类')
+          Text(t('collection.by_album'))
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
             .fontColor(this.theme().primaryText)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Text(`${this.albumCollections.length} 组`)
+          Text(`${this.albumCollections.length}${t('common.unit_group')}`)
             .fontSize(11)
             .fontColor(this.theme().secondaryText)
             .maxLines(1)
@@ -244,7 +245,7 @@ export struct PlaybackCollectionDrawer {
         .alignItems(HorizontalAlign.Start)
 
         Row() {
-          Text(this.showAlbumCollections ? '收起' : '展开')
+          Text(this.showAlbumCollections ? t('common.collapse') : t('common.expand'))
             .width('100%')
             .textAlign(TextAlign.Center)
             .fontSize(11)
@@ -308,14 +309,14 @@ export struct PlaybackCollectionDrawer {
         })
 
         Column({ space: 2 }) {
-          Text('按歌手分类')
+          Text(t('collection.by_artist'))
             .fontSize(15)
             .fontWeight(FontWeight.Medium)
             .fontColor(this.theme().primaryText)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Text(`${this.artistCollections.length} 组`)
+          Text(`${this.artistCollections.length}${t('common.unit_group')}`)
             .fontSize(11)
             .fontColor(this.theme().secondaryText)
             .maxLines(1)
@@ -325,7 +326,7 @@ export struct PlaybackCollectionDrawer {
         .alignItems(HorizontalAlign.Start)
 
         Row() {
-          Text(this.showArtistCollections ? '收起' : '展开')
+          Text(this.showArtistCollections ? t('common.collapse') : t('common.expand'))
             .width('100%')
             .textAlign(TextAlign.Center)
             .fontSize(11)
@@ -363,7 +364,7 @@ export struct PlaybackCollectionDrawer {
   @Builder
   private createPlaylistInput() {
     Row({ space: 8 }) {
-      TextInput({ text: this.newPlaylistName, placeholder: '输入播放列表名称' })
+      TextInput({ text: this.newPlaylistName, placeholder: t('home.input_playlist_name') })
         .layoutWeight(1)
         .height(38)
         .placeholderColor(this.theme().tertiaryText)
@@ -377,7 +378,7 @@ export struct PlaybackCollectionDrawer {
           this.newPlaylistName = value;
         })
 
-      Text('取消')
+      Text(t('common.cancel'))
         .fontSize(12)
         .fontColor(this.theme().secondaryText)
         .onClick(() => {
@@ -385,7 +386,7 @@ export struct PlaybackCollectionDrawer {
           this.newPlaylistName = '';
         })
 
-      Text('创建')
+      Text(t('common.create'))
         .fontSize(12)
         .fontColor(this.theme().accent)
         .onClick(() => {
@@ -444,9 +445,9 @@ export struct PlaybackCollectionDrawer {
   private customPlaylistEditor() {
     if (this.activeCustomPlaylistId().length > 0) {
       Column({ space: 0 }) {
-        this.sectionTitle('管理歌曲')
+        this.sectionTitle(t('home.manage_tracks'))
         if (this.importedTracks.length === 0) {
-          Text('暂无已导入音乐')
+          Text(t('home.no_imported'))
             .fontSize(12)
             .fontColor(this.theme().secondaryText)
             .width('100%')
@@ -485,7 +486,7 @@ export struct PlaybackCollectionDrawer {
         this.drawerHeader()
         Scroll() {
           Column({ space: 0 }) {
-            this.sectionTitle('内置')
+            this.sectionTitle(t('collection.builtin'))
             this.collectionRow(this.allCollection)
             this.collectionRow(this.favoriteCollection)
 
@@ -503,14 +504,14 @@ export struct PlaybackCollectionDrawer {
               }, (summary: PlaybackCollectionSummary) => summary.id)
             }
 
-            this.sectionTitle('自定义', this.showCreateInput ? '' : '新建', () => {
+            this.sectionTitle(t('collection.custom'), this.showCreateInput ? '' : t('collection.new_playlist'), () => {
               this.showCreateInput = true;
             })
             if (this.showCreateInput) {
               this.createPlaylistInput()
             }
             if (this.customCollections.length === 0) {
-              Text('还没有自定义播放列表')
+              Text(t('home.no_custom_playlist'))
                 .fontSize(12)
                 .fontColor(this.theme().secondaryText)
                 .width('100%')

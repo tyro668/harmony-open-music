@@ -1,6 +1,7 @@
 import { image } from '@kit.ImageKit';
 
 import { AppThemeAppearance, MusicTrack } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
@@ -59,12 +60,12 @@ export struct ImportedTrackManagerPanel {
 
   private filterLabel(filter: string): string {
     if (filter === 'queued') {
-      return '已在播放列表';
+      return t('collection.in_queue');
     }
     if (filter === 'excluded') {
-      return '未加入播放列表';
+      return t('collection.not_in_queue');
     }
-    return '全部';
+    return t('common.all');
   }
 
   private isFilterActive(filter: string): boolean {
@@ -145,7 +146,7 @@ export struct ImportedTrackManagerPanel {
     if (track.album.length > 0) {
       return track.album;
     }
-    return '本地音乐';
+    return t('track.local_music');
   }
 
   private filteredTrackIndex(trackId: string): number {
@@ -307,14 +308,14 @@ export struct ImportedTrackManagerPanel {
     Column() {
       Column() {
         Row() {
-          Text('导入音乐管理')
+          Text(t('profile.track_manager'))
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.theme().primaryText)
             .layoutWeight(1)
 
           Row({ space: 16 }) {
-            Text(this.isRepairingLyrics ? '补抓中' : '一键补抓歌词')
+            Text(this.isRepairingLyrics ? t('profile.repairing') : t('profile.repair_lyrics'))
               .fontSize(13)
               .fontColor(this.isRepairingLyrics ? this.theme().secondaryText : this.theme().accent)
               .opacity(this.tracks.length > 0 ? 1 : 0.45)
@@ -324,14 +325,14 @@ export struct ImportedTrackManagerPanel {
                 }
               })
 
-            Text(this.isSelectionMode ? '取消选择' : '批量管理')
+            Text(this.isSelectionMode ? t('profile.deselect') : t('profile.batch_manage'))
               .fontSize(13)
               .fontColor(this.theme().warningText)
               .onClick(() => {
                 this.toggleSelectionMode();
               })
 
-            Text('关闭')
+            Text(t('common.close'))
               .fontSize(14)
               .fontColor(this.theme().accent)
               .onClick(() => {
@@ -352,11 +353,11 @@ export struct ImportedTrackManagerPanel {
 
         if (this.isSelectionMode) {
           Row() {
-            Text(`已选 ${this.selectedTrackIds.length} 首`)
+            Text(t('profile.selected_count', `${this.selectedTrackIds.length}`))
               .fontSize(12)
               .fontColor(this.theme().secondaryText)
             Blank()
-            Text(this.selectedVisibleCount() === this.filteredTracks().length && this.filteredTracks().length > 0 ? '取消全选' : '全选当前筛选')
+            Text(this.selectedVisibleCount() === this.filteredTracks().length && this.filteredTracks().length > 0 ? t('profile.deselect_all') : t('profile.select_all'))
               .fontSize(12)
               .fontColor(this.theme().accent)
               .onClick(() => {
@@ -381,7 +382,7 @@ export struct ImportedTrackManagerPanel {
           Column({ space: 0 }) {
             if (this.filteredTracks().length === 0) {
               Column({ space: 8 }) {
-                Text(this.tracks.length === 0 ? '暂无导入音乐' : '当前筛选下没有歌曲')
+                Text(this.tracks.length === 0 ? t('profile.no_imported_tracks') : t('profile.no_filtered_tracks'))
                   .fontSize(17)
                   .fontWeight(FontWeight.Medium)
                   .fontColor(this.theme().secondaryText)

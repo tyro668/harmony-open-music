@@ -1,5 +1,6 @@
 import { webview } from '@kit.ArkWeb';
 import { AppThemeAppearance } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
@@ -67,12 +68,12 @@ export struct BaiduPanAuthPanel {
     Column() {
       Column({ space: 8 }) {
         Row() {
-          Text('百度授权登录')
+          Text(t('baidu.auth_title'))
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.theme().primaryText)
           Blank()
-          Text('关闭')
+          Text(t('common.close'))
             .fontSize(14)
             .fontColor(this.theme().accent)
             .onClick(() => {
@@ -103,7 +104,7 @@ export struct BaiduPanAuthPanel {
               }
             })
 
-          this.compactAction(this.isAuthorizing ? '重载' : '打开', this.appKey.trim().length > 0, true, () => {
+          this.compactAction(this.isAuthorizing ? t('baidu.reload') : t('baidu.open'), this.appKey.trim().length > 0, true, () => {
             this.onStartAuth();
           })
         }
@@ -114,7 +115,7 @@ export struct BaiduPanAuthPanel {
 
       if (this.authUrl.trim().length === 0) {
         Column() {
-          Text('待授权')
+          Text(t('baidu.pending_auth'))
             .fontSize(15)
             .fontColor(this.theme().secondaryText)
         }

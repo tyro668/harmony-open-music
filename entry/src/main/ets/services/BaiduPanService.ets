@@ -1,3 +1,4 @@
+import { t } from '../utils/I18nUtil';
 import { http } from '@kit.NetworkKit';
 
 import { AUDIO_EXTENSIONS, ONLINE_DOWNLOAD_MAX_BYTES } from '../constants/AppConstants';
@@ -25,12 +26,12 @@ function apiErrorMessage(body: Record<string, Object>): string {
   let errorCode = Number(body['errno'] as number || body['error_code'] as number || 0);
   let message = body['errmsg'] as string || body['error_msg'] as string || '';
   if (errorCode === -6 || errorCode === 111 || errorCode === 31045) {
-    return '百度网盘 access_token 无效或已过期';
+    return t('baidu.token_invalid');
   }
   if (message.length > 0) {
     return message;
   }
-  return errorCode !== 0 ? `百度网盘接口错误 ${errorCode}` : '百度网盘接口返回异常';
+  return errorCode !== 0 ? t('baidu.api_error', `${errorCode}`) : t('baidu.api_exception');
 }
 
 function headerValue(header: Object, name: string): string {
@@ -155,7 +156,7 @@ export function parentBaiduPanPath(path: string): string {
 export function baiduPanParentLabel(path: string): string {
   let parentPath = parentBaiduPanPath(path);
   if (parentPath === '/') {
-    return '百度网盘';
+    return t('baidu.name');
   }
   let lastSlashIndex = parentPath.lastIndexOf('/');
   if (lastSlashIndex < 0 || lastSlashIndex >= parentPath.length - 1) {

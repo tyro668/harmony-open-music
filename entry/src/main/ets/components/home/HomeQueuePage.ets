@@ -11,6 +11,7 @@ import {
   PAGE_HEADER_TOP_PADDING
 } from '../../constants/AppConstants';
 import { AppThemeAppearance, MusicTrack, PlayMode } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
@@ -19,7 +20,7 @@ export struct HomeQueuePage {
   @Prop tracks: MusicTrack[] = [];
   @Prop currentTrackId: string = '';
   @Prop playMode: PlayMode = PlayMode.Sequential;
-  @Prop activeCollectionTitle: string = '全部音乐';
+  @Prop activeCollectionTitle: string = t('collection.all_music');
   @Prop showRenameDialog: boolean = false;
   @Prop renameText: string = '';
   @Prop searchKeyword: string = '';
@@ -120,11 +121,11 @@ export struct HomeQueuePage {
           .height(PAGE_HEADER_ICON_SIZE)
           .fillColor(this.theme().navActiveIcon)
       }
-      .width(38)
-      .height(38)
+      .width(32)
+      .height(32)
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.theme().controlSecondaryBackground)
-      .borderRadius(19)
+      .borderRadius(12)
       .border({
         width: 1,
         color: this.theme().controlSecondaryBorder
@@ -135,11 +136,11 @@ export struct HomeQueuePage {
 
       Row({ space: 8 }) {
         Image($r('app.media.ic_search'))
-          .width(16)
-          .height(16)
+          .width(14)
+          .height(14)
           .fillColor(this.theme().tertiaryText)
 
-        TextInput({ text: this.searchKeyword, placeholder: '搜索标题...' })
+        TextInput({ text: this.searchKeyword, placeholder: t('home.search_placeholder') })
           .placeholderColor(this.theme().tertiaryText)
           .placeholderFont({ size: PAGE_HEADER_SECONDARY_FONT_SIZE })
           .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
@@ -147,7 +148,7 @@ export struct HomeQueuePage {
           .backgroundColor(Color.Transparent)
           .padding(0)
           .layoutWeight(1)
-          .height(38)
+          .height(32)
           .onChange((value: string) => {
             this.onSearchKeywordChange(value);
           })
@@ -155,7 +156,7 @@ export struct HomeQueuePage {
             this.onSearch();
           })
 
-        Text('搜索')
+        Text(t('common.search'))
           .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
           .fontColor(this.theme().accent)
           .fontWeight(FontWeight.Medium)
@@ -164,10 +165,10 @@ export struct HomeQueuePage {
           })
       }
       .layoutWeight(1)
-      .height(38)
-      .padding({ left: 12, right: 12 })
+      .height(32)
+      .padding({ left: 10, right: 10 })
       .backgroundColor(this.theme().controlSecondaryBackground)
-      .borderRadius(19)
+      .borderRadius(12)
       .border({
         width: 1,
         color: this.theme().controlSecondaryBorder
@@ -179,11 +180,11 @@ export struct HomeQueuePage {
           .height(PAGE_HEADER_ICON_SIZE)
           .fillColor(this.theme().navActiveIcon)
       }
-      .width(38)
-      .height(38)
+      .width(32)
+      .height(32)
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.theme().controlSecondaryBackground)
-      .borderRadius(19)
+      .borderRadius(12)
       .border({
         width: 1,
         color: this.theme().controlSecondaryBorder
@@ -194,13 +195,14 @@ export struct HomeQueuePage {
     }
     .width('100%')
     .height(PAGE_HEADER_HEIGHT)
-    .padding({ left: 16, right: 16 })
+    .padding({ left: 12, right: 8 })
     .backgroundColor(this.theme().headerBackground)
     .borderRadius(PAGE_HEADER_RADIUS)
     .border({
       width: 1,
       color: this.theme().headerBorder
     })
+    .margin({ left: PAGE_HEADER_HORIZONTAL_PADDING, right: PAGE_HEADER_HORIZONTAL_PADDING })
   }
 
   @Builder
@@ -253,94 +255,109 @@ export struct HomeQueuePage {
   }
 
   @Builder
-  private trackRow(track: MusicTrack) {
-    Row({ space: 10 }) {
-      if (this.currentTrackId === track.id) {
-        Stack({ alignContent: Alignment.Center }) {
-          this.coverArt(track, 58)
-          Row() {
-            Image($r('app.media.ic_play'))
-              .width(18)
-              .height(18)
-              .fillColor('#FFFFFF')
-          }
-          .width(58)
-          .height(58)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(this.theme().maskBackground)
-          .borderRadius(14)
+  private trackRow(track: MusicTrack, isLast: boolean) {
+    Column({ space: 0 }) {
+      Row({ space: 10 }) {
+        if (this.currentTrackId === track.id) {
+          Row()
+            .width(3)
+            .height(28)
+            .backgroundColor(this.theme().accent)
+            .borderRadius(1.5)
+        } else {
+          Blank().width(3)
         }
-        .width(58)
-        .height(58)
-      } else {
-        this.coverArt(track, 58)
-      }
 
-      Column({ space: 5 }) {
-        Text(track.title)
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.currentTrackId === track.id ? this.theme().primaryText : this.theme().primaryText)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.currentTrackId === track.id) {
+          Stack({ alignContent: Alignment.Center }) {
+            this.coverArt(track, 50)
+            Row() {
+              Image($r('app.media.ic_play'))
+                .width(16)
+                .height(16)
+                .fillColor('#FFFFFF')
+            }
+            .width(50)
+            .height(50)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(this.theme().maskBackground)
+            .borderRadius(14)
+          }
+          .width(50)
+          .height(50)
+        } else {
+          this.coverArt(track, 50)
+        }
 
-        Text(track.artist)
-          .fontSize(13)
-          .fontColor(this.theme().secondaryText)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+        Column({ space: 3 }) {
+          Text(track.title)
+            .fontSize(16)
+            .fontWeight(this.currentTrackId === track.id ? FontWeight.Medium : FontWeight.Normal)
+            .fontColor(this.theme().primaryText)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Image(track.isFavorite ? $r('app.media.ic_heart_filled') : $r('app.media.ic_heart'))
-        .width(20)
-        .height(20)
-        .fillColor(track.isFavorite ? '#E85D75' : this.theme().tertiaryText)
-        .onClick(() => {
-          this.onToggleFavorite(track.id);
-        })
+          Text(track.artist)
+            .fontSize(12)
+            .fontColor(this.theme().secondaryText)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
 
-      Row({ space: 4 }) {
-        Image($r('app.media.ic_clock'))
-          .width(14)
-          .height(14)
+        Image(track.isFavorite ? $r('app.media.ic_heart_filled') : $r('app.media.ic_heart'))
+          .width(18)
+          .height(18)
+          .fillColor(track.isFavorite ? '#E85D75' : this.theme().tertiaryText)
+          .onClick(() => {
+            this.onToggleFavorite(track.id);
+          })
+
+        Row({ space: 4 }) {
+          Image($r('app.media.ic_clock'))
+            .width(12)
+            .height(12)
+            .fillColor(this.theme().tertiaryText)
+
+          Text(this.trackDurationText(track))
+            .fontSize(12)
+            .fontColor(this.theme().tertiaryText)
+        }
+
+        Image($r('app.media.ic_more'))
+          .width(18)
+          .height(18)
           .fillColor(this.theme().tertiaryText)
-
-        Text(this.trackDurationText(track))
-          .fontSize(13)
-          .fontColor(this.theme().tertiaryText)
+          .onClick(() => {
+            this.onOpenRename(track);
+          })
       }
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+      .backgroundColor(this.currentTrackId === track.id ? this.theme().activeRowBackground : Color.Transparent)
+      .onClick(() => {
+        this.onTrackTap(track);
+      })
 
-      Image($r('app.media.ic_more'))
-        .width(20)
-        .height(20)
-        .fillColor(this.theme().tertiaryText)
-        .onClick(() => {
-          this.onOpenRename(track);
-        })
+      if (!isLast) {
+        Row()
+          .width('100%')
+          .height(1)
+          .backgroundColor(this.theme().divider)
+      }
     }
     .width('100%')
-    .padding({ left: 12, right: 14, top: 12, bottom: 12 })
-    .backgroundColor(this.currentTrackId === track.id ? this.theme().activeRowBackground : this.theme().inactiveRowBackground)
-    .borderRadius(16)
-    .border({
-      width: this.currentTrackId === track.id ? 1 : 0,
-      color: this.theme().activeRowBorder
-    })
-    .onClick(() => {
-      this.onTrackTap(track);
-    })
   }
 
   @Builder
   private emptyState() {
     Column({ space: 10 }) {
-      Text('当前没有歌曲')
+      Text(t('home.no_tracks'))
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.theme().primaryText)
-      Text('前往“我的”页导入本地音乐')
+      Text(t('home.import_hint'))
         .fontSize(14)
         .fontColor(this.theme().secondaryText)
         .textAlign(TextAlign.Center)
@@ -355,12 +372,12 @@ export struct HomeQueuePage {
   private renameDialog() {
     Column() {
       Column({ space: 20 }) {
-        Text('修改歌曲名称')
+        Text(t('home.rename_track'))
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.theme().primaryText)
 
-        TextInput({ text: this.renameText, placeholder: '输入新名称' })
+        TextInput({ text: this.renameText, placeholder: t('home.rename_placeholder') })
           .placeholderColor(this.theme().tertiaryText)
           .fontSize(16)
           .fontColor(this.theme().primaryText)
@@ -373,7 +390,7 @@ export struct HomeQueuePage {
           })
 
         Row({ space: 12 }) {
-          Button('取消')
+          Button(t('common.cancel'))
             .layoutWeight(1)
             .height(42)
             .fontSize(15)
@@ -385,7 +402,7 @@ export struct HomeQueuePage {
               this.onCancelRename();
             })
 
-          Button('确认')
+          Button(t('common.confirm'))
             .layoutWeight(1)
             .height(42)
             .fontSize(15)
@@ -416,26 +433,24 @@ export struct HomeQueuePage {
         }
         .width('100%')
         .padding({
-          left: PAGE_HEADER_HORIZONTAL_PADDING,
-          right: PAGE_HEADER_HORIZONTAL_PADDING,
           top: PAGE_HEADER_TOP_PADDING,
           bottom: PAGE_HEADER_BOTTOM_PADDING
         })
 
         Scroll() {
-          Column({ space: 4 }) {
+          Column({ space: 0 }) {
           if (this.tracks.length === 0) {
             this.emptyState()
           } else {
-            ForEach(this.tracks, (track: MusicTrack) => {
-              this.trackRow(track)
+            ForEach(this.tracks, (track: MusicTrack, index: number) => {
+              this.trackRow(track, index >= this.tracks.length - 1)
             }, (track: MusicTrack) => this.trackRenderKey(track))
           }
           }
           .width('100%')
           .constraintSize({ minHeight: '100%' })
           .justifyContent(FlexAlign.Start)
-          .padding({ left: 16, right: 16, bottom: this.bottomInset + 20 })
+          .padding({ bottom: this.bottomInset })
         }
         .width('100%')
         .layoutWeight(1)

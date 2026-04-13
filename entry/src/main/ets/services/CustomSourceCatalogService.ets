@@ -1,3 +1,4 @@
+import { t } from '../utils/I18nUtil';
 import { MusicSourceConfig, MusicSourceQuality } from '../models/AppModels';
 import {
   defaultMusicSources,
@@ -26,7 +27,7 @@ export function createPendingMusicSource(
   if (normalizedScript.length === 0) {
     return {
       source: null,
-      errorMessage: '脚本内容为空'
+      errorMessage: t('source.empty_content')
     };
   }
 
@@ -36,7 +37,7 @@ export function createPendingMusicSource(
   if (duplicated) {
     return {
       source: null,
-      errorMessage: '该音源已添加'
+      errorMessage: t('source.already_added')
     };
   }
 

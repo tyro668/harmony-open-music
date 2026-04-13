@@ -1,4 +1,5 @@
 import { AppThemeAppearance } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
@@ -24,7 +25,7 @@ export struct SourceUpdateAlertDialog {
         })
 
       Column({ space: 14 }) {
-        Text(this.name.length > 0 ? `${this.name} 有新提醒` : '音源更新提醒')
+        Text(this.name.length > 0 ? t('source.update_dialog_title', this.name) : t('source.update_dialog_default_title'))
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.theme().primaryText)
@@ -38,7 +39,7 @@ export struct SourceUpdateAlertDialog {
 
         if (this.updateUrl.length > 0) {
           Column({ space: 6 }) {
-            Text('更新链接')
+            Text(t('source.update_link'))
               .fontSize(12)
               .fontColor(this.theme().secondaryText)
               .width('100%')
@@ -51,7 +52,7 @@ export struct SourceUpdateAlertDialog {
         }
 
         Row() {
-          Text('关闭')
+          Text(t('common.close'))
             .fontSize(15)
             .fontColor(this.theme().onAccent)
             .fontWeight(FontWeight.Bold)

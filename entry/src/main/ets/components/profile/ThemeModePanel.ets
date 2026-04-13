@@ -1,4 +1,5 @@
 import { AppThemeAppearance, AppThemeMode } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { appThemeModeLabel, appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
@@ -33,7 +34,7 @@ export struct ThemeModePanel {
       .alignItems(HorizontalAlign.Start)
 
       if (this.isSelected(mode)) {
-        Text('当前')
+        Text(t('common.current'))
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.theme().accent)
@@ -64,12 +65,12 @@ export struct ThemeModePanel {
 
       Column({ space: 14 }) {
         Row() {
-          Text('外观')
+          Text(t('profile.theme_panel_title'))
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.theme().primaryText)
           Blank()
-          Text('关闭')
+          Text(t('common.close'))
             .fontSize(14)
             .fontColor(this.theme().accent)
             .onClick(() => {
@@ -78,9 +79,9 @@ export struct ThemeModePanel {
         }
         .width('100%')
 
-        this.optionRow(AppThemeMode.Light, '白天默认更清爽')
-        this.optionRow(AppThemeMode.Dark, '夜间更柔和')
-        this.optionRow(AppThemeMode.System, '自动跟随系统深浅色')
+        this.optionRow(AppThemeMode.Light, t('profile.theme_light_desc'))
+        this.optionRow(AppThemeMode.Dark, t('profile.theme_dark_desc'))
+        this.optionRow(AppThemeMode.System, t('profile.theme_system_desc'))
       }
       .width('100%')
       .padding({ left: 18, right: 18, top: 18, bottom: 28 })

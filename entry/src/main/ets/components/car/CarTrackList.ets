@@ -1,6 +1,7 @@
 import { image } from '@kit.ImageKit';
 
 import { AppThemeAppearance, MusicTrack } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { formatDurationMs } from '../../utils/TrackUtils';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
@@ -10,7 +11,7 @@ export struct CarTrackList {
   @Prop tracks: MusicTrack[] = [];
   @Prop currentTrackId: string = '';
   @Prop coveredTrackIds: string[] = [];
-  @Prop title: string = '播放列表';
+  @Prop title: string = t('collection.play_queue');
   onTrackTap: (track: MusicTrack) => void = (_: MusicTrack) => {};
   coverForTrack: (trackId: string) => image.PixelMap | null = (_: string) => null;
 
@@ -34,7 +35,7 @@ export struct CarTrackList {
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.theme().primaryText)
-        Text(`${this.tracks.length} 首`)
+        Text(`${this.tracks.length}${t('common.unit_song')}`)
           .fontSize(16)
           .fontColor(this.theme().tertiaryText)
           .margin({ left: 12 })

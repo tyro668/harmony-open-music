@@ -1,4 +1,5 @@
 import { AppThemeAppearance, MusicSourceQuality } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import {
   resolvePreferredSourceQuality,
   sourceDisplayName,
@@ -137,7 +138,7 @@ export struct PlatformSelectorDrawer {
           .maxLines(1)
 
         if (this.isActive(item.source)) {
-          Text('当前')
+          Text(t('common.current'))
             .fontSize(11)
             .fontWeight(FontWeight.Medium)
             .fontColor('#FFFFFF')
@@ -153,7 +154,7 @@ export struct PlatformSelectorDrawer {
         this.onSelectSubSource(item.source);
       })
 
-      Text(`默认 ${sourceQualityDisplayName(this.preferredQuality(item))} · ${item.qualitys.length} 种音质`)
+      Text(t('explore.platform_quality_summary', sourceQualityDisplayName(this.preferredQuality(item)), `${item.qualitys.length}`))
         .fontSize(12)
         .fontColor(this.isActive(item.source) ? this.theme().secondaryText : this.theme().secondaryText)
 
@@ -194,19 +195,19 @@ export struct PlatformSelectorDrawer {
         Column() {
           Row() {
             Column({ space: 6 }) {
-              Text('音乐平台')
+              Text(t('explore.platform_title'))
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(this.theme().primaryText)
 
-              Text('选择当前音源下的音乐平台')
+              Text(t('explore.platform_hint'))
                 .fontSize(13)
                 .fontColor(this.theme().secondaryText)
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
 
-            Text('关闭')
+            Text(t('common.close'))
               .fontSize(15)
               .fontColor(this.theme().accent)
               .onClick(() => {

@@ -4,12 +4,13 @@ import {
   sourceDisplayName,
   sourceQualityDisplayName
 } from '../../utils/MusicSourceUtils';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct SourceBrowserPanel {
   @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
-  @Prop title: string = '音源浏览';
+  @Prop title: string = t('source.browser_title');
   @Prop subSources: MusicSourceQuality[] = [];
   @Prop activeSearchSource: string = '';
   @Prop sourceSearchKeyword: string = '';
@@ -26,7 +27,7 @@ export struct SourceBrowserPanel {
   onSearch: () => void = () => {};
   onLoadMore: () => void = () => {};
   onImportTrack: (track: MusicSourceTrack) => void = (_: MusicSourceTrack) => {};
-  sourceTrackActionLabel: (track: MusicSourceTrack) => string = (_: MusicSourceTrack) => '导入';
+  sourceTrackActionLabel: (track: MusicSourceTrack) => string = (_: MusicSourceTrack) => t('common.import');
   sourceTrackActionEnabled: (track: MusicSourceTrack) => boolean = (_: MusicSourceTrack) => true;
 
   private formatDuration(seconds: number): string {
@@ -80,7 +81,7 @@ export struct SourceBrowserPanel {
   @Builder
   private qualitySelector(item: MusicSourceQuality) {
     Column({ space: 8 }) {
-      Text(`当前音质 ${sourceQualityDisplayName(this.preferredQuality(item))}`)
+      Text(t('source.current_quality', sourceQualityDisplayName(this.preferredQuality(item))))
         .fontSize(12)
         .fontColor(this.theme().secondaryText)
 
@@ -101,7 +102,7 @@ export struct SourceBrowserPanel {
 
   private resolvedTrackActionLabel(track: MusicSourceTrack): string {
     let importQueueSnapshot = this.sourceImportingTrackKeys.join('|');
-    return importQueueSnapshot.length < 0 ? '导入' : this.sourceTrackActionLabel(track);
+    return importQueueSnapshot.length < 0 ? t('common.import') : this.sourceTrackActionLabel(track);
   }
 
   private resolvedTrackActionEnabled(track: MusicSourceTrack): boolean {
@@ -111,10 +112,10 @@ export struct SourceBrowserPanel {
 
   private importButtonBackground(track: MusicSourceTrack): string {
     let label = this.resolvedTrackActionLabel(track);
-    if (label === '已导入') {
+    if (label === t('common.imported')) {
       return this.theme().successBackground;
     }
-    if (label === '导入中') {
+    if (label === t('common.importing')) {
       return this.theme().accentSoftBackground;
     }
     return this.theme().accent;
@@ -122,10 +123,10 @@ export struct SourceBrowserPanel {
 
   private importButtonFontColor(track: MusicSourceTrack): string {
     let label = this.resolvedTrackActionLabel(track);
-    if (label === '已导入') {
+    if (label === t('common.imported')) {
       return this.theme().successText;
     }
-    if (label === '导入中') {
+    if (label === t('common.importing')) {
       return this.theme().accent;
     }
     return this.theme().onAccent;
@@ -146,7 +147,7 @@ export struct SourceBrowserPanel {
             .fontWeight(FontWeight.Bold)
             .fontColor(this.theme().primaryText)
             .layoutWeight(1)
-          Text('关闭')
+          Text(t('common.close'))
             .fontSize(15)
             .fontColor(this.theme().accent)
             .onClick(() => {
@@ -183,7 +184,7 @@ export struct SourceBrowserPanel {
           }
 
           Row({ space: 10 }) {
-            TextInput({ placeholder: '搜索歌曲...', text: this.sourceSearchKeyword })
+            TextInput({ placeholder: t('explore.search_placeholder'), text: this.sourceSearchKeyword })
               .onChange((value: string) => {
                 this.onSearchKeywordChange(value);
               })
@@ -199,7 +200,7 @@ export struct SourceBrowserPanel {
               .borderRadius(12)
               .padding({ left: 14, right: 14 })
 
-            Button('搜索')
+            Button(t('common.search'))
               .height(40)
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
@@ -221,7 +222,7 @@ export struct SourceBrowserPanel {
               .width(36)
               .height(36)
               .color(this.theme().accent)
-            Text('加载中...')
+            Text(t('common.loading'))
               .fontSize(14)
               .fontColor(this.theme().secondaryText)
               .margin({ top: 10 })
@@ -231,10 +232,10 @@ export struct SourceBrowserPanel {
           .alignItems(HorizontalAlign.Center)
         } else if (this.subSources.length === 0) {
           Column({ space: 10 }) {
-            Text('当前音源暂无可搜索曲库')
+            Text(t('source.no_search_library'))
               .fontSize(18)
               .fontColor(this.theme().secondaryText)
-            Text('Harmony 版当前支持酷我、酷狗、咪咕')
+            Text(t('source.search_supported'))
               .fontSize(13)
               .fontColor(this.theme().tertiaryText)
           }
@@ -243,10 +244,10 @@ export struct SourceBrowserPanel {
           .alignItems(HorizontalAlign.Center)
         } else if (this.sourceTracks.length === 0) {
           Column({ space: 10 }) {
-            Text('搜索歌曲')
+            Text(t('source.search_title'))
               .fontSize(18)
               .fontColor(this.theme().secondaryText)
-            Text('输入关键词搜索音源中的歌曲')
+            Text(t('source.search_hint'))
               .fontSize(13)
               .fontColor(this.theme().tertiaryText)
           }
@@ -306,7 +307,7 @@ export struct SourceBrowserPanel {
 
               if (this.sourceTracks.length < this.sourceTotal) {
                 Row() {
-                  Button('加载更多')
+                  Button(t('common.load_more'))
                     .height(38)
                     .fontSize(14)
                     .backgroundColor(this.theme().accentSoftBackground)

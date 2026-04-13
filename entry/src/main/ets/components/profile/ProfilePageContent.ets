@@ -1,7 +1,6 @@
 import {
   PAGE_HEADER_BOTTOM_PADDING,
   PAGE_HEADER_HEIGHT,
-  PAGE_HEADER_HORIZONTAL_PADDING,
   PAGE_HEADER_ICON_SIZE,
   PAGE_HEADER_PRIMARY_FONT_SIZE,
   PAGE_HEADER_RADIUS,
@@ -9,13 +8,14 @@ import {
   PAGE_HEADER_TOP_PADDING
 } from '../../constants/AppConstants';
 import { AppThemeAppearance, MusicSourceConfig } from '../../models/AppModels';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 
 @Component
 export struct ProfilePageContent {
   @StorageProp('appThemeAppearance') themeAppearance: AppThemeAppearance = AppThemeAppearance.Light;
-  @Prop totalHours: number = 0;
-  @Prop themeModeLabel: string = '浅色';
+  @Prop totalListeningText: string = t('profile.listening_hours', '0');
+  @Prop themeModeLabel: string = t('theme.light');
   @Prop musicSources: MusicSourceConfig[] = [];
   @Prop importedTrackCount: number = 0;
   @Prop playQueueTrackCount: number = 0;
@@ -34,9 +34,9 @@ export struct ProfilePageContent {
 
   private importedTrackSubtitle(): string {
     if (this.importedTrackCount === 0) {
-      return '管理已导入歌曲，并决定是否加入播放列表';
+      return t('profile.import_setting_desc');
     }
-    return `已导入 ${this.importedTrackCount} 首，当前在播放列表中 ${this.playQueueTrackCount} 首`;
+    return t('profile.imported_stats', `${this.importedTrackCount}`, `${this.playQueueTrackCount}`);
   }
 
   @Builder
@@ -84,14 +84,14 @@ export struct ProfilePageContent {
           .height(PAGE_HEADER_ICON_SIZE)
           .fillColor(this.theme().accent)
 
-        Text(`累计听歌 ${this.totalHours} 小时`)
+        Text(this.totalListeningText)
           .fontSize(PAGE_HEADER_PRIMARY_FONT_SIZE)
           .fontColor(this.theme().secondaryText)
           .fontWeight(FontWeight.Medium)
       }
       .layoutWeight(1)
 
-      Text(`${this.importedTrackCount} 首已导入`)
+      Text(t('profile.imported_count', `${this.importedTrackCount}`))
         .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
         .fontColor(this.theme().secondaryText)
     }
@@ -114,24 +114,22 @@ export struct ProfilePageContent {
         }
         .width('100%')
         .padding({
-          left: PAGE_HEADER_HORIZONTAL_PADDING,
-          right: PAGE_HEADER_HORIZONTAL_PADDING,
           top: PAGE_HEADER_TOP_PADDING,
           bottom: PAGE_HEADER_BOTTOM_PADDING
         })
 
         Column({ space: 20 }) {
         Column() {
-          this.sectionItem('本地导入设置', '重新选择本地音乐文件', true, () => {
+          this.sectionItem(t('profile.local_import'), t('profile.local_import_desc'), true, () => {
             this.onImportLocal();
           })
-          this.sectionItem('百度网盘导入', '浏览百度网盘中的音频文件', true, () => {
+          this.sectionItem(t('profile.baidu_import'), t('profile.baidu_import_desc'), true, () => {
             this.onOpenBaiduPanImport();
           })
-          this.sectionItem('主题外观', this.themeModeLabel, true, () => {
+          this.sectionItem(t('profile.theme_appearance'), this.themeModeLabel, true, () => {
             this.onOpenThemeMode();
           })
-          this.sectionItem('导入音乐管理', this.importedTrackSubtitle(), false, () => {
+          this.sectionItem(t('profile.track_manager'), this.importedTrackSubtitle(), false, () => {
             this.onOpenImportedTrackManager();
           })
         }
@@ -141,12 +139,12 @@ export struct ProfilePageContent {
 
         Column({ space: 0 }) {
           Row() {
-            Text('音源设置')
+            Text(t('profile.source_setting'))
               .fontSize(17)
               .fontWeight(FontWeight.Bold)
               .fontColor(this.theme().primaryText)
             Blank()
-            Text('管理')
+            Text(t('common.manage'))
               .fontSize(14)
               .fontColor(this.theme().accent)
               .onClick(() => {
@@ -157,7 +155,7 @@ export struct ProfilePageContent {
           .padding({ left: 20, right: 20, top: 16, bottom: 12 })
 
           if (this.musicSources.length === 0) {
-            Text('暂未添加自定义音源，点击管理添加')
+            Text(t('profile.no_source_hint'))
               .fontSize(13)
               .fontColor(this.theme().tertiaryText)
               .padding({ left: 20, right: 20, bottom: 16 })
@@ -177,7 +175,7 @@ export struct ProfilePageContent {
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
 
-                Text('浏览')
+                Text(t('common.browse'))
                   .fontSize(13)
                   .fontColor(this.theme().onAccent)
                   .fontWeight(FontWeight.Medium)
@@ -207,7 +205,7 @@ export struct ProfilePageContent {
         .borderRadius(20)
 
         Column() {
-          this.sectionItem('均衡器调节', '当前版本先保留入口', false, () => {
+          this.sectionItem(t('profile.equalizer'), t('profile.equalizer_desc'), false, () => {
             this.onOpenEqualizer();
           })
         }
@@ -216,12 +214,11 @@ export struct ProfilePageContent {
         .borderRadius(20)
         }
         .width('100%')
-        .padding({ left: 16, right: 16 })
       }
       .width('100%')
       .constraintSize({ minHeight: '100%' })
       .justifyContent(FlexAlign.Start)
-      .padding({ bottom: this.bottomInset + 20 })
+      .padding({ bottom: this.bottomInset })
     }
     .scrollBar(BarState.Off)
     .align(Alignment.Top)

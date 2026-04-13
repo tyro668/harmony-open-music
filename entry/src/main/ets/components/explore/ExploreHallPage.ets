@@ -3,13 +3,13 @@ import {
   PAGE_HEADER_HEIGHT,
   PAGE_HEADER_HORIZONTAL_PADDING,
   PAGE_HEADER_ICON_SIZE,
-  PAGE_HEADER_PRIMARY_FONT_SIZE,
   PAGE_HEADER_RADIUS,
   PAGE_HEADER_SECONDARY_FONT_SIZE,
   PAGE_HEADER_TOP_PADDING
 } from '../../constants/AppConstants';
 import { AppThemeAppearance, MusicSourceConfig, MusicSourceQuality, MusicSourceTrack, SourceBoardItem } from '../../models/AppModels';
 import { filterSupportedExploreSources, sourceDisplayName } from '../../utils/MusicSourceUtils';
+import { t } from '../../utils/I18nUtil';
 import { appThemePalette } from '../../utils/ThemeUtils';
 import { PlatformSelectorDrawer } from './PlatformSelectorDrawer';
 
@@ -42,7 +42,7 @@ export struct ExploreHallPage {
   onSelectBoard: (board: SourceBoardItem) => void = (_: SourceBoardItem) => {};
   onImportTrack: (track: MusicSourceTrack) => void = (_: MusicSourceTrack) => {};
   onLoadMore: () => void = () => {};
-  sourceTrackActionLabel: (track: MusicSourceTrack) => string = (_: MusicSourceTrack) => '导入';
+  sourceTrackActionLabel: (track: MusicSourceTrack) => string = (_: MusicSourceTrack) => t('common.import');
   sourceTrackActionEnabled: (track: MusicSourceTrack) => boolean = (_: MusicSourceTrack) => true;
 
   private activeSource(): MusicSourceConfig | undefined {
@@ -214,7 +214,7 @@ export struct ExploreHallPage {
 
   private resolvedTrackActionLabel(track: MusicSourceTrack): string {
     let importQueueSnapshot = this.sourceImportingTrackKeys.join('|');
-    return importQueueSnapshot.length < 0 ? '导入' : this.sourceTrackActionLabel(track);
+    return importQueueSnapshot.length < 0 ? t('common.import') : this.sourceTrackActionLabel(track);
   }
 
   private resolvedTrackActionEnabled(track: MusicSourceTrack): boolean {
@@ -224,10 +224,10 @@ export struct ExploreHallPage {
 
   private importButtonBackground(track: MusicSourceTrack): string {
     let label = this.resolvedTrackActionLabel(track);
-    if (label === '已导入') {
+    if (label === t('common.imported')) {
       return this.theme().successBackground;
     }
-    if (label === '导入中') {
+    if (label === t('common.importing')) {
       return this.theme().accentSoftBackground;
     }
     return this.theme().accent;
@@ -235,10 +235,10 @@ export struct ExploreHallPage {
 
   private importButtonFontColor(track: MusicSourceTrack): string {
     let label = this.resolvedTrackActionLabel(track);
-    if (label === '已导入') {
+    if (label === t('common.imported')) {
       return this.theme().successText;
     }
-    if (label === '导入中') {
+    if (label === t('common.importing')) {
       return this.theme().accent;
     }
     return this.theme().onAccent;
@@ -262,14 +262,14 @@ export struct ExploreHallPage {
             .backgroundColor(this.theme().panelSecondaryBackground)
             .borderRadius(40)
 
-            Text('暂无音源')
+            Text(t('explore.no_source'))
               .fontSize(20)
               .fontWeight(FontWeight.Medium)
               .fontColor(this.theme().secondaryText)
-            Text('请前往「我的」页面添加自定义音源')
+            Text(t('explore.add_source_hint'))
               .fontSize(14)
               .fontColor(this.theme().tertiaryText)
-            Button('去我的')
+            Button(t('explore.go_profile'))
               .height(42)
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
@@ -288,16 +288,16 @@ export struct ExploreHallPage {
           .alignItems(HorizontalAlign.Center)
         } else {
           if (this.availableSubSources().length > 0) {
-            Row({ space: 10 }) {
+            Row({ space: 8 }) {
               this.platformTriggerIcon()
 
               Row({ space: 8 }) {
                 Image($r('app.media.ic_search'))
-                  .width(PAGE_HEADER_ICON_SIZE)
-                  .height(PAGE_HEADER_ICON_SIZE)
-                  .fillColor(this.sourceSearchKeyword.trim().length > 0 ? this.theme().accent : this.theme().secondaryText)
+                  .width(14)
+                  .height(14)
+                  .fillColor(this.theme().tertiaryText)
 
-                TextInput({ placeholder: '搜索歌曲...', text: this.sourceSearchKeyword })
+                TextInput({ placeholder: t('explore.search_placeholder'), text: this.sourceSearchKeyword })
                   .onChange((value: string) => {
                     this.onSearchKeywordChange(value);
                   })
@@ -305,30 +305,31 @@ export struct ExploreHallPage {
                     this.onSearch();
                   })
                   .layoutWeight(1)
-                  .height(PAGE_HEADER_HEIGHT)
-                  .fontSize(PAGE_HEADER_PRIMARY_FONT_SIZE)
+                  .height(32)
+                  .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
                   .fontColor(this.theme().primaryText)
                   .placeholderColor(this.theme().tertiaryText)
+                  .placeholderFont({ size: PAGE_HEADER_SECONDARY_FONT_SIZE })
                   .backgroundColor(Color.Transparent)
-                  .padding({ left: 0, right: 0 })
+                  .padding(0)
+
+                Text(t('common.search'))
+                  .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
+                  .fontColor(this.theme().accent)
+                  .fontWeight(FontWeight.Medium)
+                  .onClick(() => {
+                    this.onSearch();
+                  })
               }
               .layoutWeight(1)
-
-              Button('搜索')
-                .height(32)
-                .fontSize(PAGE_HEADER_SECONDARY_FONT_SIZE)
-                .fontWeight(FontWeight.Medium)
-                .backgroundColor(this.sourceSearchKeyword.trim().length > 0 ? this.theme().accent : this.theme().panelSecondaryBackground)
-                .fontColor(this.sourceSearchKeyword.trim().length > 0 ? this.theme().onAccent : this.theme().accent)
-                .borderRadius(12)
-                .border({
-                  width: this.sourceSearchKeyword.trim().length > 0 ? 0 : 1,
-                  color: this.theme().accentSoftBorder
-                })
-                .padding({ left: 14, right: 14 })
-                .onClick(() => {
-                  this.onSearch();
-                })
+              .height(32)
+              .padding({ left: 10, right: 10 })
+              .backgroundColor(this.theme().controlSecondaryBackground)
+              .borderRadius(12)
+              .border({
+                width: 1,
+                color: this.theme().controlSecondaryBorder
+              })
             }
             .width('100%')
             .height(PAGE_HEADER_HEIGHT)
@@ -337,7 +338,7 @@ export struct ExploreHallPage {
             .borderRadius(PAGE_HEADER_RADIUS)
             .border({
               width: 1,
-              color: this.sourceSearchKeyword.trim().length > 0 ? this.theme().accentSoftBorder : this.theme().headerBorder
+              color: this.theme().headerBorder
             })
             .margin({
               left: PAGE_HEADER_HORIZONTAL_PADDING,
@@ -364,7 +365,7 @@ export struct ExploreHallPage {
           if (this.sourceBoardsLoading) {
             Row() {
               LoadingProgress().width(20).height(20).color('#5DB8C9')
-              Text('加载榜单...').fontSize(13).fontColor(this.theme().secondaryText).margin({ left: 8 })
+              Text(t('explore.loading_board')).fontSize(13).fontColor(this.theme().secondaryText).margin({ left: 8 })
             }
             .width('100%')
             .padding({ left: 24, right: 24, bottom: 12 })
@@ -398,7 +399,7 @@ export struct ExploreHallPage {
                 .width(36)
                 .height(36)
                 .color('#5DB8C9')
-              Text('加载中...')
+              Text(t('common.loading'))
                 .fontSize(14)
                 .fontColor(this.theme().secondaryText)
                 .margin({ top: 10 })
@@ -409,10 +410,10 @@ export struct ExploreHallPage {
             .alignItems(HorizontalAlign.Center)
           } else if (this.availableSubSources().length === 0) {
             Column({ space: 10 }) {
-              Text('当前音源暂无可浏览曲库')
+              Text(t('explore.no_browsable_library'))
                 .fontSize(16)
                 .fontColor(this.theme().secondaryText)
-              Text('当前音源暂无可浏览的子源')
+              Text(t('explore.no_browsable_subsource'))
                 .fontSize(13)
                 .fontColor(this.theme().tertiaryText)
             }
@@ -422,17 +423,17 @@ export struct ExploreHallPage {
           } else if (this.sourceTracks.length === 0 && !this.sourceBoardsLoading) {
             Column({ space: 10 }) {
               if (this.exploreMode === 'board') {
-                Text('选择榜单浏览歌曲')
+                Text(t('explore.select_board'))
                   .fontSize(16)
                   .fontColor(this.theme().secondaryText)
-                Text('切换子源或点击榜单查看排行')
+                Text(t('explore.switch_or_browse'))
                   .fontSize(13)
                   .fontColor(this.theme().tertiaryText)
               } else {
-                Text('搜索发现音乐')
+                Text(t('explore.search_discover'))
                   .fontSize(16)
                   .fontColor(this.theme().secondaryText)
-                Text('输入关键词搜索音源中的歌曲')
+                Text(t('explore.search_input_hint'))
                   .fontSize(13)
                   .fontColor(this.theme().tertiaryText)
               }
@@ -502,7 +503,7 @@ export struct ExploreHallPage {
 
                 if (this.sourceTracks.length < this.sourceTotal) {
                   Row() {
-                    Button('加载更多')
+                    Button(t('common.load_more'))
                       .height(38)
                       .fontSize(14)
                       .backgroundColor(this.theme().accentSoftBackground)
@@ -521,7 +522,7 @@ export struct ExploreHallPage {
               .width('100%')
               .constraintSize({ minHeight: '100%' })
               .justifyContent(FlexAlign.Start)
-              .padding({ bottom: this.bottomInset + 20 })
+              .padding({ bottom: this.bottomInset })
             }
             .scrollBar(BarState.Off)
             .align(Alignment.Top)
