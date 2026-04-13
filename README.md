@@ -235,6 +235,45 @@ SQLite 数据库 (`local_music_player.db`) 包含 5 张表：
 3. 连接 HarmonyOS 设备或启动模拟器
 4. 点击 Run 运行应用
 
+### 命令行构建
+
+先准备 DevEco Studio 自带的 Node 和 hvigor 路径：
+
+```bash
+export DEVECO_NODE="<DevEco-Studio>/Contents/tools/node/bin/node"
+export DEVECO_HVIGORW="<DevEco-Studio>/Contents/tools/hvigor/bin/hvigorw.js"
+```
+
+构建测试包（开发调试，使用 `develop + debug`）：
+
+```bash
+"$DEVECO_NODE" "$DEVECO_HVIGORW" \
+	--mode module \
+	-p module=entry@default \
+	-p product=develop \
+	-p buildMode=debug \
+	-p requiredDeviceType=phone \
+	assembleHap --analyze=normal --parallel --incremental --daemon
+```
+
+构建发布包（正式发布，使用 `publish + release`）：
+
+```bash
+"$DEVECO_NODE" "$DEVECO_HVIGORW" \
+	--mode module \
+	-p module=entry@default \
+	-p product=publish \
+	-p buildMode=release \
+	-p requiredDeviceType=phone \
+	assembleHap --analyze=normal --parallel --incremental --daemon
+```
+
+说明：
+
+- `develop/debug` 用于本地开发、联调和测试包构建。
+- `publish/release` 用于正式发布包构建。
+- 当前工程仍保留 `default` product 作为 hvigor 兼容入口，但推荐直接使用上面两套显式命令。
+
 ### 项目配置
 
 - **Bundle Name**: `com.opensource.metis.music`
