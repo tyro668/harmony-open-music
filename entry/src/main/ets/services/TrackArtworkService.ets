@@ -1,10 +1,13 @@
 import { media } from '@kit.MediaKit';
 import { fileUri } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
+import { http } from '@kit.NetworkKit';
 import fs from '@ohos.file.fs';
 
 import { MusicTrack } from '../models/AppModels';
 import { lineLyricFromLxLyric } from '../utils/LyricsParser';
+
+const TRACK_ARTWORK_DOWNLOAD_MAX_BYTES: number = 8 * 1024 * 1024;
 
 function resolveTrackArtworkPath(track: MusicTrack): string {
   if (track.filePath.length > 0) {
@@ -54,7 +57,15 @@ export async function extractTrackDuration(track: MusicTrack): Promise<number> {
   }
 }
 
-export async function extractTrackArtwork(track: MusicTrack): Promise<image.PixelMap | null> {
+function remoteTrackArtworkUrl(track: MusicTrack): string {
+  let pic = track.pic.trim();
+  if (pic.startsWith('https://') || pic.startsWith('http://')) {
+    return pic;
+  }
+  return '';
+}
+
+async function extractEmbeddedTrackArtwork(track: MusicTrack): Promise<image.PixelMap | null> {
   let playablePath = resolveTrackArtworkPath(track);
   if (playablePath.length === 0) {
     return null;
@@ -86,6 +97,62 @@ export async function extractTrackArtwork(track: MusicTrack): Promise<image.Pixe
         // ignore file cleanup failures
       }
     }
+  }
+}
+
+async function extractRemoteTrackArtwork(track: MusicTrack): Promise<image.PixelMap | null> {
+  let coverUrl = remoteTrackArtworkUrl(track);
+  if (coverUrl.length === 0) {
+    return null;
+  }
+
+  let httpClient = http.createHttp();
+  try {
+    let response = await httpClient.request(coverUrl, {
+      method: http.RequestMethod.GET,
+      expectDataType: http.HttpDataType.ARRAY_BUFFER,
+      readTimeout: 20000,
+      connectTimeout: 10000,
+      usingCache: false,
+      maxLimit: TRACK_ARTWORK_DOWNLOAD_MAX_BYTES,
+      header: { 'User-Agent': 'Mozilla/5.0 (HarmonyOS Music Player)' } as Record<string, string>
+    });
+    if (response.responseCode < 200 || response.responseCode >= 300) {
+      return null;
+    }
+    let imageBuffer = response.result as ArrayBuffer;
+    if (!(imageBuffer instanceof ArrayBuffer) || imageBuffer.byteLength === 0) {
+      return null;
+    }
+    let imageSource = image.createImageSource(imageBuffer.slice(0, imageBuffer.byteLength));
+    return await imageSource.createPixelMap();
+  } catch (_) {
+    return null;
+  } finally {
+    httpClient.destroy();
+  }
+}
+
+export async function extractTrackArtwork(track: MusicTrack): Promise<image.PixelMap | null> {
+  let embeddedArtwork = await extractEmbeddedTrackArtwork(track);
+  if (embeddedArtwork !== null) {
+    return embeddedArtwork;
+  }
+  return await extractRemoteTrackArtwork(track);
+}
+
+export async function savePixelMapToFile(pixelMap: image.PixelMap, filePath: string): Promise<void> {
+  let imagePacker = image.createImagePacker();
+  let packOpts: image.PackingOption = {
+    format: 'image/jpeg',
+    quality: 90
+  };
+  let arrayBuffer = await imagePacker.packing(pixelMap, packOpts);
+  let file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY);
+  try {
+    fs.writeSync(file.fd, arrayBuffer);
+  } finally {
+    fs.closeSync(file.fd);
   }
 }
 

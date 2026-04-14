@@ -9,6 +9,7 @@ import {
   isSupportedExploreSource,
   sourceDisplayName
 } from '../utils/MusicSourceUtils';
+import { appendImportedTrackIfMissing } from '../utils/ImportStateUtils';
 import { t } from '../utils/I18nUtil';
 import { fetchBoardTrackPage, searchSourceTrackPage } from '../services/MusicSourceApiService';
 import { fetchBuiltInSourceLyrics } from '../services/SourceLyricsService';
@@ -52,6 +53,7 @@ export class ExploreViewModel extends BaseViewModel {
   onStateChanged: ((state: ExploreState) => void) | null = null;
   onRequestMusicUrl: ((source: MusicSourceConfig, track: MusicSourceTrack, quality: string) => Promise<string>) | null = null;
   onRequestLyric: ((source: MusicSourceConfig, track: MusicSourceTrack) => Promise<SourceLyricResult | null>) | null = null;
+  onGetLocalTracks: (() => MusicTrack[]) | null = null;
   onLocalTracksChanged: ((tracks: MusicTrack[]) => void) | null = null;
   onSaveTrackLyricSidecars: ((filePath: string, lyricResult: SourceLyricResult) => boolean) | null = null;
   onSyncTrackMetadataCaches: (() => void) | null = null;
@@ -208,34 +210,39 @@ export class ExploreViewModel extends BaseViewModel {
     return this.sourceTrackActionLabel(track, localTracks, importingKeys) === t('common.import');
   }
 
-  enqueueSourceTrackImport(source: MusicSourceConfig, track: MusicSourceTrack, localTracks: MusicTrack[], state: ExploreState): void {
-    if (this.findImportedSourceTrack(track, localTracks)) { this.showToast(t('import.track_imported', track.name)); return; }
+  private latestLocalTracks(): MusicTrack[] {
+    return this.onGetLocalTracks ? this.onGetLocalTracks() : [];
+  }
+
+  enqueueSourceTrackImport(source: MusicSourceConfig, track: MusicSourceTrack, state: ExploreState): void {
+    if (this.findImportedSourceTrack(track, this.latestLocalTracks())) { this.showToast(t('import.track_imported', track.name)); return; }
     let importKey = this.sourceTrackImportKey(track);
     if (state.sourceImportingTrackKeys.indexOf(importKey) >= 0) return;
     this.sourceImportQueue.push(new SourceImportTask(importKey, source, track));
     state.sourceImportingTrackKeys = state.sourceImportingTrackKeys.concat([importKey]);
     this.notifyStateChanged(state);
     this.showToast(t('import.queue_added', track.name));
-    void this.processSourceImportQueue(state, localTracks);
+    void this.processSourceImportQueue(state);
   }
 
-  private async processSourceImportQueue(state: ExploreState, localTracks: MusicTrack[]): Promise<void> {
+  private async processSourceImportQueue(state: ExploreState): Promise<void> {
     if (this.isProcessingSourceImportQueue) return;
     this.isProcessingSourceImportQueue = true;
     try {
       while (this.sourceImportQueue.length > 0) {
         let task = this.sourceImportQueue.shift();
         if (!task) continue;
-        await this.importSourceTrack(task.source, task.track, task.key, state, localTracks);
+        await this.importSourceTrack(task.source, task.track, task.key, state);
       }
     } finally {
       this.isProcessingSourceImportQueue = false;
     }
   }
 
-  private async importSourceTrack(source: MusicSourceConfig, track: MusicSourceTrack, importKey: string, state: ExploreState, localTracks: MusicTrack[]): Promise<void> {
+  private async importSourceTrack(source: MusicSourceConfig, track: MusicSourceTrack, importKey: string, state: ExploreState): Promise<void> {
     try {
-      if (this.findImportedSourceTrack(track, localTracks)) return;
+      let currentLocalTracks = this.latestLocalTracks();
+      if (this.findImportedSourceTrack(track, currentLocalTracks)) return;
       let quality = resolveSourceTrackQuality(source, track);
       if (!this.onRequestMusicUrl) throw new Error('no music url handler');
       let musicUrl = await this.onRequestMusicUrl(source, track, quality);
@@ -269,13 +276,14 @@ export class ExploreViewModel extends BaseViewModel {
         id: `source-${Date.now()}`, title: track.name, artist: track.singer, album: track.album,
         durationMs: track.duration > 0 ? track.duration * 1000 : 0, folder: 'downloads',
         sourceUri: '', filePath: targetPath, rawFileName: '',
-        accentColor: COLOR_PALETTE[localTracks.length % COLOR_PALETTE.length],
+        accentColor: COLOR_PALETTE[currentLocalTracks.length % COLOR_PALETTE.length],
         pic: track.pic, isFavorite: false, isImported: true, inPlayQueue: true,
         playCount: 0, lastPlayedAt: 0, sourceImportKey: importKey
       };
 
-      if (!this.findImportedSourceTrack(track, localTracks)) {
-        let updatedTracks = localTracks.concat([importedTrack]);
+      let latestLocalTracks = this.latestLocalTracks();
+      if (!this.findImportedSourceTrack(track, latestLocalTracks)) {
+        let updatedTracks = appendImportedTrackIfMissing(latestLocalTracks, importedTrack);
         if (this.onLocalTracksChanged) this.onLocalTracksChanged(updatedTracks);
         if (this.onSyncTrackMetadataCaches) this.onSyncTrackMetadataCaches();
       }

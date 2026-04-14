@@ -54,6 +54,7 @@ export class PlaybackViewModel extends BaseViewModel {
   onPlaybackRecordFlush: ((trackId: string, startedAt: number, listenedMs: number) => void) | null = null;
   onPlaybackRecordBegin: ((trackId: string) => void) | null = null;
   onDurationCached: ((trackId: string, durationMs: number) => void) | null = null;
+  onResumeAfterAudioInterrupt: ((trackId: string, progressMs: number) => void) | null = null;
 
   clampSeekMs(value: number, durationMs: number): number {
     let safeValue = Math.max(0, Math.floor(value));
@@ -497,6 +498,14 @@ export class PlaybackViewModel extends BaseViewModel {
       interruptEvent.hintType === audio.InterruptHint.INTERRUPT_HINT_UNMUTE;
   }
 
+  private canResumeExistingPlayerAfterInterrupt(): boolean {
+    if (!this.player) {
+      return false;
+    }
+    let playerState = this.player.state;
+    return playerState === 'paused' || playerState === 'prepared' || playerState === 'completed' || playerState === 'playing';
+  }
+
   private handlePlayerAudioInterrupt(interruptEvent: audio.InterruptEvent, sessionId: number, state: PlaybackState): void {
     if (sessionId !== this.playerSession) {
       return;
@@ -542,17 +551,25 @@ export class PlaybackViewModel extends BaseViewModel {
   private async resumeAfterAudioInterrupt(state: PlaybackState): Promise<void> {
     let resumeTrackId = this.interruptedTrackId.length > 0 ? this.interruptedTrackId : state.loadedTrackId;
     let resumeProgressMs = this.interruptedProgressMs;
+    let shouldRestart = this.playerReleasedDuringInterrupt || !this.canResumeExistingPlayerAfterInterrupt();
     this.shouldResumeAfterInterrupt = false;
     this.interruptedTrackId = '';
     this.interruptedProgressMs = 0;
+    this.playerReleasedDuringInterrupt = false;
     if (resumeTrackId.length === 0) {
-      this.playerReleasedDuringInterrupt = false;
       return;
     }
-    this.playerReleasedDuringInterrupt = false;
-    // The actual resume logic needs localTracks from Index
-    if (this.onPlaybackStateChanged) {
-      this.onPlaybackStateChanged(false);
+    if (shouldRestart) {
+      if (this.onResumeAfterAudioInterrupt) {
+        this.onResumeAfterAudioInterrupt(resumeTrackId, resumeProgressMs);
+      } else if (this.onPlaybackStateChanged) {
+        this.onPlaybackStateChanged(false);
+      }
+      return;
+    }
+    let resumed = await this.resumeCurrentTrack(state);
+    if (!resumed && this.onResumeAfterAudioInterrupt) {
+      this.onResumeAfterAudioInterrupt(resumeTrackId, resumeProgressMs);
     }
   }
 
@@ -571,18 +588,20 @@ export class PlaybackViewModel extends BaseViewModel {
     }
   }
 
-  async resumeCurrentTrack(state: PlaybackState): Promise<void> {
+  async resumeCurrentTrack(state: PlaybackState): Promise<boolean> {
     if (!this.player) {
-      return;
+      return false;
     }
     this.setMiniPlayButtonState(state, true, true);
     try {
       await this.player.play();
       state.isPlaying = true;
       this.setMiniPlayButtonState(state, true, false);
+      return true;
     } catch (error) {
       console.error(`resume failed: ${JSON.stringify(error)}`);
       this.setMiniPlayButtonState(state, false, false);
+      return false;
     }
   }
 

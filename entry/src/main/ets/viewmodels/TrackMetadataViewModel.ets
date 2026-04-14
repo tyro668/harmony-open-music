@@ -143,6 +143,9 @@ export class TrackMetadataViewModel extends BaseViewModel {
       if (pixelMap === null) {
         this.refreshAlbumArtworkAliases(localTracks);
         this.refreshTrackArtworkIds(state, localTracks);
+        if (currentTrackId.length > 0 && this.trackArtworkForTrack(currentTrackId) !== null && this.onCurrentTrackArtworkLoaded) {
+          this.onCurrentTrackArtworkLoaded(currentTrackId);
+        }
         if (this.trackArtworkForTrack(track.id) !== null) return;
         this.trackArtworkUnavailableIds.add(track.id);
         return;
@@ -154,8 +157,8 @@ export class TrackMetadataViewModel extends BaseViewModel {
       this.refreshAlbumArtworkAliases(localTracks);
       this.refreshTrackArtworkIds(state, localTracks);
       await releaseExtractedTrackArtwork(previous);
-      if (track.id === currentTrackId && this.onCurrentTrackArtworkLoaded) {
-        this.onCurrentTrackArtworkLoaded(track.id);
+      if (currentTrackId.length > 0 && this.trackArtworkForTrack(currentTrackId) !== null && this.onCurrentTrackArtworkLoaded) {
+        this.onCurrentTrackArtworkLoaded(currentTrackId);
       }
     } finally {
       this.trackArtworkLoadingIds.delete(track.id);

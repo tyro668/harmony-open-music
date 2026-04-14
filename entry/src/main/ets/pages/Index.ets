@@ -42,6 +42,7 @@ import {
   appendPlaybackRecord, PlaybackRecordEntry, PersistableAppState
 } from '../services/AppStatePersistenceService';
 import { resolvePreferredSubSource } from '../services/CustomSourceCatalogService';
+import { savePixelMapToFile } from '../services/TrackArtworkService';
 import { PlaybackViewModel, PlaybackState } from '../viewmodels/PlaybackViewModel';
 import { AppShellViewModel, AppShellState } from '../viewmodels/AppShellViewModel';
 import { SourceViewModel, SourceState } from '../viewmodels/SourceViewModel';
@@ -177,6 +178,12 @@ struct Index {
     this.playbackVm.onPlaybackRecordFlush = (trackId: string, startedAt: number, listenedMs: number) => {
       void this.commitPlaybackRecord(trackId, startedAt, listenedMs);
     };
+    this.playbackVm.onResumeAfterAudioInterrupt = (trackId: string, progressMs: number) => {
+      let track = this.library.localTracks.find((t: MusicTrack) => t.id === trackId);
+      if (track) {
+        void this.playbackVm.restartTrackPlayerAfterInterrupt(this.playback, track, progressMs);
+      }
+    };
 
     this.shellVm.onResumeCurrentTrack = () => void this.playbackVm.resumeCurrentTrack(this.playback);
     this.shellVm.onPauseCurrentTrack = () => void this.playbackVm.pauseCurrentTrack(this.playback);
@@ -190,6 +197,7 @@ struct Index {
       this.schedulePersistState();
     };
     this.shellVm.onRefreshAVSessionQueue = () => { void this.shellVm.refreshAVSessionQueue(this.library.localTracks, this.library.customPlaylists, this.library.activePlaybackCollectionId); };
+    this.shellVm.onRequestTrackArtwork = (trackId: string) => this.metadataVm.trackArtworkForTrack(trackId);
 
     this.sourceVm.onGetMusicSourceScript = (sourceId: string) => this.getMusicSourceScript(sourceId);
     this.sourceVm.onDeleteMusicSourceScript = (sourceId: string) => this.deleteMusicSourceScript(sourceId);
@@ -200,18 +208,53 @@ struct Index {
 
     this.exploreVm.onRequestMusicUrl = (source, track, quality) => this.sourceVm.requestMusicUrlFromEngine(this.source, source, track, quality);
     this.exploreVm.onStateChanged = (state: ExploreState) => { this.refreshExploreState(state); };
+    this.exploreVm.onGetLocalTracks = () => this.library.localTracks;
     this.exploreVm.onLocalTracksChanged = (tracks) => { this.library.localTracks = tracks; this.refreshLibraryState(); };
     this.exploreVm.onSyncTrackMetadataCaches = () => { this.metadataVm.syncTrackMetadataCaches(this.metadata, this.library.localTracks, this.library.currentTrackId); };
 
+    this.baiduPanVm.onGetLocalTracks = () => this.library.localTracks;
     this.baiduPanVm.onLocalTracksChanged = (tracks) => { this.library.localTracks = tracks; this.refreshLibraryState(); };
     this.baiduPanVm.onSyncTrackMetadataCaches = () => { this.metadataVm.syncTrackMetadataCaches(this.metadata, this.library.localTracks, this.library.currentTrackId); };
 
     this.libraryVm.onStateChanged = () => { this.refreshLibraryState(); };
     this.libraryVm.onAVSessionUpdateNeeded = () => { void this.shellVm.updateAVSessionState(this.playback.isPlaying, this.playback.playbackProgressMs, this.playback.playbackDurationMs, this.library.playMode, this.libraryVm.currentTrackIsFavorite(this.library)); };
+
+    this.metadataVm.onCurrentTrackArtworkLoaded = async (trackId: string) => {
+      let pixelMap = this.metadataVm.trackArtworkForTrack(trackId);
+      if (!pixelMap) return;
+      let cachePath = this.resolveCoverCachePath(trackId);
+      let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      let coverDir = `${context.cacheDir}/covers`;
+      try {
+        if (!fs.accessSync(coverDir)) {
+          fs.mkdirSync(coverDir, true);
+        }
+        await savePixelMapToFile(pixelMap, cachePath);
+        this.shellVm.setCoverArtFilePath(cachePath);
+        if (trackId === this.library.currentTrackId) {
+          await this.updateSessionCoverArt(trackId);
+          await this.shellVm.updateMusicLiveView(this.playback.isPlaying, this.currentTrack(), this.playback.playbackProgressMs, this.playback.playbackDurationMs, this.lyricVm.currentLyricPreviewText(this.lyric), this.lyricVm.currentLyricSecondaryText(this.lyric));
+        }
+      } catch (error) {
+        console.error(`save track artwork failed: ${JSON.stringify(error)}`);
+      }
+    };
   }
 
   private currentTrack(): MusicTrack {
     return selectCurrentTrack(this.library.localTracks, this.library.currentTrackId);
+  }
+
+  private resolveCoverCachePath(trackId: string): string {
+    let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    return `${context.cacheDir}/covers/${trackId}.jpg`;
+  }
+
+  private async updateSessionCoverArt(trackId: string): Promise<void> {
+    let track = this.library.localTracks.find((t: MusicTrack) => t.id === trackId);
+    if (!track) return;
+    let navIds = this.libraryVm.resolveAdjacentTrackIds(this.library, trackId);
+    await this.shellVm.updateAVSessionCoverArt(track, this.playback.playbackDurationMs, this.libraryVm.currentTrackIsFavorite(this.library), this.library.playMode, this.lyricVm.currentLyricMetadataText(this.lyric), this.lyricVm.currentLyricContentText(this.lyric), this.lyricVm.currentLyricSecondaryText(this.lyric), navIds[0], navIds[1]);
   }
 
   private theme() {
@@ -377,6 +420,12 @@ struct Index {
   private async startTrackPlayback(track: MusicTrack): Promise<void> {
     this.library.currentTrackId = track.id;
     this.refreshLibraryState();
+    let cachePath = this.resolveCoverCachePath(track.id);
+    if (fs.accessSync(cachePath)) {
+      this.shellVm.setCoverArtFilePath(cachePath);
+    } else {
+      this.shellVm.setCoverArtFilePath('');
+    }
     await this.playbackVm.startTrackPlayback(this.playback, track, this.library.localTracks);
     let navIds = this.libraryVm.resolveAdjacentTrackIds(this.library, track.id);
     await this.shellVm.createAVSession(track, this.playback.playbackDurationMs, this.libraryVm.currentTrackIsFavorite(this.library), this.library.playMode, this.lyricVm.currentLyricMetadataText(this.lyric), this.lyricVm.currentLyricContentText(this.lyric), this.lyricVm.currentLyricSecondaryText(this.lyric), navIds[0], navIds[1]);
@@ -672,7 +721,7 @@ struct Index {
           let source = this.exploreVm.ensureExploreSourceReady(this.source, this.explore, false);
           if (source) void this.exploreVm.fetchBoardTracks(this.explore.activeSearchSource, board.bangid, 1, this.explore);
         },
-        onImportTrack: (track: MusicSourceTrack) => { let source = this.exploreVm.ensureExploreSourceReady(this.source, this.explore, false); if (source) this.exploreVm.enqueueSourceTrackImport(source, track, this.library.localTracks, this.explore); },
+        onImportTrack: (track: MusicSourceTrack) => { let source = this.exploreVm.ensureExploreSourceReady(this.source, this.explore, false); if (source) this.exploreVm.enqueueSourceTrackImport(source, track, this.explore); },
         onLoadMore: () => { let source = this.exploreVm.ensureExploreSourceReady(this.source, this.explore, false); if (source) { if (this.explore.exploreMode === 'board') void this.exploreVm.fetchBoardTracks(this.explore.activeSearchSource, this.explore.activeBoardId, this.explore.sourceCurrentPage + 1, this.explore); else void this.exploreVm.searchSourceTracks(this.explore.sourceSearchKeyword, this.explore.activeSearchSource, this.explore.sourceCurrentPage + 1, this.explore); } },
         sourceTrackActionLabel: (track: MusicSourceTrack) => this.exploreVm.sourceTrackActionLabel(track, this.library.localTracks, this.explore.sourceImportingTrackKeys),
         sourceTrackActionEnabled: (track: MusicSourceTrack) => this.exploreVm.sourceTrackActionEnabled(track, this.library.localTracks, this.explore.sourceImportingTrackKeys)
@@ -744,7 +793,7 @@ struct Index {
           onRefresh: () => { void this.baiduPanVm.loadBaiduPanDirectory(this.baiduPan, this.baiduPan.baiduPanCurrentDir); },
           onEnterDirectory: (entry: BaiduPanEntry) => { void this.baiduPanVm.enterBaiduPanDirectory(this.baiduPan, entry); },
           onGoParent: () => { void this.baiduPanVm.goParentBaiduPanDirectory(this.baiduPan); },
-          onImportEntry: (entry: BaiduPanEntry) => { void this.baiduPanVm.importBaiduPanEntry(this.baiduPan, entry, this.library.localTracks); }
+          onImportEntry: (entry: BaiduPanEntry) => { void this.baiduPanVm.importBaiduPanEntry(this.baiduPan, entry); }
         })
       }
       if (this.baiduPan.showBaiduPanAuthPanel) {
@@ -779,7 +828,7 @@ struct Index {
           onSearchKeywordChange: (value: string) => { this.explore.sourceSearchKeyword = value; this.refreshExploreState(); },
           onSearch: () => { let source = this.source.musicSources.find((s: MusicSourceConfig) => s.id === this.explore.activeSourceId); if (source) void this.exploreVm.searchSourceTracks(this.explore.sourceSearchKeyword, this.explore.activeSearchSource, 1, this.explore); },
           onLoadMore: () => { let source = this.source.musicSources.find((s: MusicSourceConfig) => s.id === this.explore.activeSourceId); if (source) void this.exploreVm.searchSourceTracks(this.explore.sourceSearchKeyword, this.explore.activeSearchSource, this.explore.sourceCurrentPage + 1, this.explore); },
-          onImportTrack: (track: MusicSourceTrack) => { let source = this.source.musicSources.find((s: MusicSourceConfig) => s.id === this.explore.activeSourceId); if (source) this.exploreVm.enqueueSourceTrackImport(source, track, this.library.localTracks, this.explore); },
+          onImportTrack: (track: MusicSourceTrack) => { let source = this.source.musicSources.find((s: MusicSourceConfig) => s.id === this.explore.activeSourceId); if (source) this.exploreVm.enqueueSourceTrackImport(source, track, this.explore); },
           sourceTrackActionLabel: (track: MusicSourceTrack) => this.exploreVm.sourceTrackActionLabel(track, this.library.localTracks, this.explore.sourceImportingTrackKeys),
           sourceTrackActionEnabled: (track: MusicSourceTrack) => this.exploreVm.sourceTrackActionEnabled(track, this.library.localTracks, this.explore.sourceImportingTrackKeys)
         })

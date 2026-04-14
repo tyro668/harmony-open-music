@@ -11,8 +11,18 @@ import {
   parentBaiduPanPath
 } from '../services/BaiduPanService';
 import { buildDownloadedTrack, sanitizeFileName } from '../utils/TrackUtils';
+import { appendImportedTrackIfMissing, hasTrackWithSourceImportKey } from '../utils/ImportStateUtils';
 import { t } from '../utils/I18nUtil';
 import { BaseViewModel } from './BaseViewModel';
+
+class BaiduPanImportTask {
+  key: string;
+  entry: BaiduPanEntry;
+  constructor(key: string, entry: BaiduPanEntry) {
+    this.key = key;
+    this.entry = entry;
+  }
+}
 
 @Observed
 export class BaiduPanState {
@@ -29,8 +39,11 @@ export class BaiduPanState {
 
 export class BaiduPanViewModel extends BaseViewModel {
   private baiduPanLastAuthMessage: string = '';
+  private baiduPanImportQueue: BaiduPanImportTask[] = [];
+  private isProcessingBaiduPanImportQueue: boolean = false;
 
   // Callbacks
+  onGetLocalTracks: (() => MusicTrack[]) | null = null;
   onLocalTracksChanged: ((tracks: MusicTrack[]) => void) | null = null;
   onSyncTrackMetadataCaches: (() => void) | null = null;
 
@@ -126,17 +139,45 @@ export class BaiduPanViewModel extends BaseViewModel {
     await this.loadBaiduPanDirectory(state, parentBaiduPanPath(state.baiduPanCurrentDir));
   }
 
-  async importBaiduPanEntry(state: BaiduPanState, entry: BaiduPanEntry, localTracks: MusicTrack[]): Promise<void> {
+  private latestLocalTracks(): MusicTrack[] {
+    return this.onGetLocalTracks ? this.onGetLocalTracks() : [];
+  }
+
+  async importBaiduPanEntry(state: BaiduPanState, entry: BaiduPanEntry): Promise<void> {
     if (entry.isDirectory) { await this.enterBaiduPanDirectory(state, entry); return; }
     let importKey = this.baiduPanEntryImportKey(entry);
     if (state.baiduPanImportingKeys.indexOf(importKey) >= 0) return;
-    let alreadyImported = localTracks.some((track: MusicTrack) => track.sourceImportKey === importKey);
+    let alreadyImported = hasTrackWithSourceImportKey(this.latestLocalTracks(), importKey);
     if (alreadyImported) { this.showToast(t('baidu.entry_imported', entry.name)); return; }
     let accessToken = state.baiduPanAccessToken.trim();
     if (accessToken.length === 0) { this.showToast(t('baidu.auth_required')); return; }
 
+    this.baiduPanImportQueue.push(new BaiduPanImportTask(importKey, entry));
     state.baiduPanImportingKeys = state.baiduPanImportingKeys.concat([importKey]);
+    this.showToast(t('import.queue_added', entry.name));
+    void this.processBaiduPanImportQueue(state);
+  }
+
+  private async processBaiduPanImportQueue(state: BaiduPanState): Promise<void> {
+    if (this.isProcessingBaiduPanImportQueue) return;
+    this.isProcessingBaiduPanImportQueue = true;
     try {
+      while (this.baiduPanImportQueue.length > 0) {
+        let task = this.baiduPanImportQueue.shift();
+        if (!task) continue;
+        await this.performBaiduPanImport(state, task.entry, task.key);
+      }
+    } finally {
+      this.isProcessingBaiduPanImportQueue = false;
+    }
+  }
+
+  private async performBaiduPanImport(state: BaiduPanState, entry: BaiduPanEntry, importKey: string): Promise<void> {
+    try {
+      if (hasTrackWithSourceImportKey(this.latestLocalTracks(), importKey)) return;
+      let accessToken = state.baiduPanAccessToken.trim();
+      if (accessToken.length === 0) throw new Error(t('baidu.auth_required'));
+
       let context = this.context();
       let downloadDirectory = `${context.filesDir}/downloads`;
       try { if (!fs.accessSync(downloadDirectory)) fs.mkdirSync(downloadDirectory, true); } catch (_) {}
@@ -147,15 +188,17 @@ export class BaiduPanViewModel extends BaseViewModel {
       let outputFile = fs.openSync(targetPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
       try { fs.writeSync(outputFile.fd, audioBuffer); } finally { fs.closeSync(outputFile); }
 
-      let importedTrack = buildDownloadedTrack(targetPath, `https://pan.baidu.com${entry.path}`, localTracks.length);
+      let currentLocalTracks = this.latestLocalTracks();
+      let importedTrack = buildDownloadedTrack(targetPath, `https://pan.baidu.com${entry.path}`, currentLocalTracks.length);
       let folderLabel = baiduPanParentLabel(entry.path);
       importedTrack.folder = folderLabel;
       importedTrack.album = folderLabel;
       importedTrack.sourceImportKey = importKey;
 
-      let hasImportedTrack = localTracks.some((track: MusicTrack) => track.sourceImportKey === importKey);
+      let latestLocalTracks = this.latestLocalTracks();
+      let hasImportedTrack = hasTrackWithSourceImportKey(latestLocalTracks, importKey);
       if (!hasImportedTrack) {
-        let updatedTracks = localTracks.concat([importedTrack]);
+        let updatedTracks = appendImportedTrackIfMissing(latestLocalTracks, importedTrack);
         if (this.onLocalTracksChanged) this.onLocalTracksChanged(updatedTracks);
         if (this.onSyncTrackMetadataCaches) this.onSyncTrackMetadataCaches();
       }

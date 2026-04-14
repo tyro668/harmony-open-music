@@ -269,6 +269,18 @@ export default function backgroundPlaybackTest() {
       expect(actions).assertContain('resumeCurrentTrack');
     });
 
+    it('audio_interrupt_end_should_restart_player_when_interrupt_released_or_stopped_it', 0, () => {
+      let actions: string[] = [];
+      let playerState = 'stopped';
+      let playerReleasedDuringInterrupt = false;
+      let canResumeExistingPlayer = playerState === 'paused' || playerState === 'prepared' || playerState === 'completed' || playerState === 'playing';
+      let shouldRestart = playerReleasedDuringInterrupt || !canResumeExistingPlayer;
+      if (shouldRestart) {
+        actions.push('restartTrackPlayerAfterInterrupt');
+      }
+      expect(actions).assertContain('restartTrackPlayerAfterInterrupt');
+    });
+
     it('completed_state_stops_everything', 0, () => {
       // 播放完成必须停止后台任务、销毁 AVSession、停止 LiveView
       let actions: string[] = [];

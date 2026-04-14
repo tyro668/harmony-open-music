@@ -23,6 +23,7 @@ import {
   appThemeModeToColorMode,
   resolveAppThemeAppearance
 } from '../utils/ThemeUtils';
+import { resolveTrackDisplayCover } from '../utils/TrackCoverDisplayUtils';
 import {
   applyPlaybackLiveViewUpdate,
   applyStoppedLiveViewUpdate,
@@ -79,6 +80,7 @@ export class AppShellViewModel extends BaseViewModel {
   onSelectPlaybackCollectionForCar: ((collectionId: string) => void) | null = null;
   onStartTrackPlayback: ((track: MusicTrack) => void) | null = null;
   onRefreshAVSessionQueue: (() => void) | null = null;
+  onRequestTrackArtwork: ((trackId: string) => image.PixelMap | null) | null = null;
 
   // Theme
   applyThemeMode(state: AppShellState, mode: AppThemeMode, shouldPersist: boolean): void {
@@ -291,10 +293,10 @@ export class AppShellViewModel extends BaseViewModel {
       this.liveViewSequence = 1;
       this.liveViewIconFrameIndex = 0;
       await this.saveLiveViewCoverIcon(track.id);
-      let iconFile = this.currentLiveViewIconFileName(false);
+      let icon = this.resolveLiveViewIcon(track, false);
       let context = this.context();
       let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
-      let nextLiveView = createPlaybackLiveView(track, clickAction, this.liveViewSequence, iconFile, currentLyricPreviewText, currentLyricSecondaryText, false);
+      let nextLiveView = createPlaybackLiveView(track, clickAction, this.liveViewSequence, icon, currentLyricPreviewText, currentLyricSecondaryText, false);
       await liveViewManager.startLiveView(nextLiveView);
       this.liveView = nextLiveView;
       this.liveViewCompactLayout = false;
@@ -303,10 +305,10 @@ export class AppShellViewModel extends BaseViewModel {
       let errorCode = handledError.code;
       if (errorCode === 401) {
         try {
-          let iconFile = this.currentLiveViewIconFileName(false);
+          let icon = this.resolveLiveViewIcon(track, false);
           let context = this.context();
           let clickAction = await createPlaybackWantAgent(context, APP_BUNDLE_NAME, APP_ENTRY_ABILITY_NAME);
-          let compactLiveView = createPlaybackLiveView(track, clickAction, this.liveViewSequence, iconFile, currentLyricPreviewText, currentLyricSecondaryText, true);
+          let compactLiveView = createPlaybackLiveView(track, clickAction, this.liveViewSequence, icon, currentLyricPreviewText, currentLyricSecondaryText, true);
           await liveViewManager.startLiveView(compactLiveView);
           this.liveView = compactLiveView;
           this.liveViewCompactLayout = true;
@@ -331,9 +333,9 @@ export class AppShellViewModel extends BaseViewModel {
       if (track.id !== this.liveViewCoverTrackId) {
         await this.saveLiveViewCoverIcon(track.id);
       }
-      let iconFile = this.currentLiveViewIconFileName(playing);
+      let icon = this.resolveLiveViewIcon(track, playing);
       let progress = durationMs > 0 ? Math.round(progressMs / durationMs * 100) : 0;
-      this.liveView = applyPlaybackLiveViewUpdate(this.liveView, track, this.liveViewSequence, progress, playing, iconFile, currentLyricPreviewText, currentLyricSecondaryText, this.liveViewCompactLayout);
+      this.liveView = applyPlaybackLiveViewUpdate(this.liveView, track, this.liveViewSequence, progress, playing, icon, currentLyricPreviewText, currentLyricSecondaryText, this.liveViewCompactLayout);
       await liveViewManager.updateLiveView(this.liveView);
     } catch (error) {
       let errorCode = (error as BusinessError).code;
@@ -377,6 +379,12 @@ export class AppShellViewModel extends BaseViewModel {
 
   private currentLiveViewIconFileName(playing: boolean): string {
     return resolveLiveViewIconFileName(playing, this.liveViewIconFrameIndex);
+  }
+
+  private resolveLiveViewIcon(track: MusicTrack, playing: boolean): string | image.PixelMap {
+    let pixelMap = this.onRequestTrackArtwork ? this.onRequestTrackArtwork(track.id) : null;
+    let cover = resolveTrackDisplayCover(track, pixelMap);
+    return cover ?? resolveLiveViewIconFileName(playing, this.liveViewIconFrameIndex);
   }
 
   private async saveLiveViewCoverIcon(trackId: string): Promise<void> {

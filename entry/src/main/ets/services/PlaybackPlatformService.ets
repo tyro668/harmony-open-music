@@ -1,4 +1,5 @@
 import { common } from '@kit.AbilityKit';
+import { image } from '@kit.ImageKit';
 import { liveViewManager } from '@kit.LiveViewKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { avSession } from '@kit.AVSessionKit';
@@ -36,7 +37,7 @@ export function createPlaybackLiveView(
   track: MusicTrack,
   clickAction: WantAgent,
   sequence: number,
-  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME,
+  icon: string | image.PixelMap = LIVE_VIEW_ICON_FILE_NAME,
   lyricText: string = '',
   secondaryLyricText: string = '',
   compactLayout: boolean = false
@@ -46,8 +47,8 @@ export function createPlaybackLiveView(
     event: 'TIMER',
     sequence: sequence,
     liveViewData: {
-      primary: buildPlaybackPrimaryData(track, clickAction, iconFileName, lyricText, secondaryLyricText, 0, compactLayout),
-      capsule: buildPlaybackCapsule(track, iconFileName, lyricText, secondaryLyricText, compactLayout)
+      primary: buildPlaybackPrimaryData(track, clickAction, icon, lyricText, secondaryLyricText, 0, compactLayout),
+      capsule: buildPlaybackCapsule(track, icon, lyricText, secondaryLyricText, compactLayout)
     }
   };
 }
@@ -58,7 +59,7 @@ export function applyPlaybackLiveViewUpdate(
   sequence: number,
   progress: number,
   playing: boolean,
-  iconFileName: string = LIVE_VIEW_ICON_FILE_NAME,
+  icon: string | image.PixelMap = LIVE_VIEW_ICON_FILE_NAME,
   lyricText: string = '',
   secondaryLyricText: string = '',
   compactLayout: boolean = false
@@ -68,20 +69,20 @@ export function applyPlaybackLiveViewUpdate(
   liveView.liveViewData.primary = buildPlaybackPrimaryData(
     track,
     clickAction,
-    iconFileName,
+    icon,
     lyricText,
     secondaryLyricText,
     progress,
     compactLayout
   );
-  liveView.liveViewData.capsule = buildPlaybackCapsule(track, iconFileName, lyricText, secondaryLyricText, compactLayout);
+  liveView.liveViewData.capsule = buildPlaybackCapsule(track, icon, lyricText, secondaryLyricText, compactLayout);
   return liveView;
 }
 
 function buildPlaybackPrimaryData(
   track: MusicTrack,
   clickAction: WantAgent | undefined,
-  iconFileName: string,
+  icon: string | image.PixelMap,
   lyricText: string,
   secondaryLyricText: string,
   progress: number,
@@ -94,14 +95,14 @@ function buildPlaybackPrimaryData(
     clickAction: clickAction
   };
   if (!compactLayout) {
-    primary.layoutData = buildPlaybackProgressLayout(progress, iconFileName);
+    primary.layoutData = buildPlaybackProgressLayout(progress, icon);
   }
   return primary;
 }
 
 function buildPlaybackCapsule(
   track: MusicTrack,
-  iconFileName: string,
+  icon: string | image.PixelMap,
   lyricText: string,
   secondaryLyricText: string,
   compactLayout: boolean
@@ -114,7 +115,7 @@ function buildPlaybackCapsule(
     backgroundColor: '#FF2A2928'
   };
   if (!compactLayout) {
-    capsule.icon = iconFileName;
+    capsule.icon = icon;
   }
   return capsule;
 }
@@ -154,14 +155,14 @@ function buildPlaybackLiveViewCapsuleContent(track: MusicTrack, secondaryLyricTe
   return `${track.artist} - ${track.album}`;
 }
 
-function buildPlaybackProgressLayout(progress: number, iconFileName: string): liveViewManager.ProgressLayout {
+function buildPlaybackProgressLayout(progress: number, icon: string | image.PixelMap): liveViewManager.ProgressLayout {
   let normalizedProgress = Math.max(0, Math.min(progress, 100));
   let layout: liveViewManager.ProgressLayout = {
     layoutType: liveViewManager.LayoutType.LAYOUT_TYPE_PROGRESS,
     progress: normalizedProgress,
     color: '#FFF1F1F1',
     backgroundColor: '#FF444341',
-    nodeIcons: [iconFileName]
+    nodeIcons: [icon]
   };
   return layout;
 }
